@@ -1,0 +1,12 @@
+<tt-card>
+  <div class="tt-kpi">
+    <span class="tt-kpi__icon" [class]="'tt-kpi__icon tt-kpi__icon--' + iconVariant()">
+      <tt-icon [name]="icon()" />
+    </span>
+    <strong class="tt-kpi__value">{{ value() }}</strong>
+    <span class="tt-kpi__label">{{ label() }}</span>
+    @if (sublabel()) {
+      <span class="tt-kpi__sublabel">{{ sublabel() }}</span>
+    }
+  </div>
+</tt-card>

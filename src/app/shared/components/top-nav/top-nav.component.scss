@@ -1,0 +1,152 @@
+@use '../../../../styles/tokens' as *;
+
+.tt-top-nav {
+  align-items: center;
+  background: $card;
+  border-bottom: 1px solid $line;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: max-content 1fr max-content;
+  left: 0;
+  min-height: 56px;
+  padding: 9px 18px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 20;
+}
+
+.tt-top-nav__brand,
+.tt-top-nav__links,
+.tt-top-nav__tools,
+.tt-top-nav__profile {
+  align-items: center;
+  display: flex;
+}
+
+.tt-top-nav__brand {
+  gap: 8px;
+}
+
+.tt-top-nav__mark {
+  align-items: center;
+  background: $forest;
+  border-radius: 7px;
+  color: $cream;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.tt-top-nav__wordmark {
+  color: $ink;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.tt-top-nav__links {
+  gap: 4px;
+  justify-content: center;
+  min-width: 0;
+}
+
+.tt-top-nav__link {
+  align-items: center;
+  border-radius: 20px;
+  color: $ink-faint;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 5px;
+  min-height: 28px;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.tt-top-nav__link tt-icon {
+  font-size: 13px;
+}
+
+.tt-top-nav__link--active {
+  background: $sage-light;
+  color: $forest;
+}
+
+.tt-top-nav__tools {
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tt-top-nav__icon-button {
+  align-items: center;
+  background: $card;
+  border: 1px solid $line;
+  border-radius: 50%;
+  color: $ink-soft;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  width: 28px;
+}
+
+.tt-top-nav__profile {
+  gap: 7px;
+  min-width: 0;
+}
+
+.tt-top-nav__avatar {
+  align-items: center;
+  background: $forest;
+  border-radius: 50%;
+  color: $cream;
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 800;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.tt-top-nav__identity {
+  display: grid;
+  gap: 1px;
+}
+
+.tt-top-nav__identity strong {
+  color: $ink;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tt-top-nav__identity small {
+  color: $ink-faint;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (max-width: 820px) {
+  .tt-top-nav {
+    align-items: start;
+    grid-template-columns: 1fr;
+    position: static;
+  }
+
+  .tt-top-nav__links {
+    justify-content: start;
+    overflow-x: auto;
+  }
+
+  .tt-top-nav__tools {
+    justify-content: start;
+  }
+}

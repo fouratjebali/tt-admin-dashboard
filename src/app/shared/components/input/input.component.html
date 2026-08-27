@@ -1,0 +1,16 @@
+<label class="tt-field">
+  @if (label()) {
+    <span class="tt-field__label">{{ label() }}</span>
+  }
+  <input
+    class="tt-field__control"
+    [disabled]="disabled()"
+    [placeholder]="placeholder()"
+    [type]="type()"
+    [value]="value()"
+    (input)="onInput($event)"
+  />
+  @if (hint()) {
+    <span class="tt-field__hint">{{ hint() }}</span>
+  }
+</label>

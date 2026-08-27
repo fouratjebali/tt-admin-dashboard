@@ -1,0 +1,35 @@
+@use '../../../../styles/tokens' as *;
+
+.tt-card {
+  background: $card;
+  border: 1px solid $line;
+  border-radius: 10px;
+  box-shadow: $card-shadow;
+  padding: 10px;
+}
+
+.tt-card__header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.tt-card__header h2 {
+  color: $ink;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.tt-card__action {
+  align-items: center;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.tt-card__body {
+  min-width: 0;
+}

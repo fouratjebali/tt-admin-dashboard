@@ -1,0 +1,53 @@
+@use '../../../../styles/tokens' as *;
+
+:host {
+  display: inline-flex;
+}
+
+.tt-button {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 5px;
+  min-height: 24px;
+  padding: 5px 11px;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+  }
+}
+
+.tt-button__icon {
+  font-size: 13px;
+}
+
+.tt-button__label {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tt-button--primary {
+  background: $forest;
+  color: $cream;
+}
+
+.tt-button--ghost {
+  background: $card;
+  border-color: $forest;
+  color: $forest;
+}
+
+.tt-button--danger {
+  background: $terracotta;
+  color: $card;
+}

@@ -1,0 +1,18 @@
+<label class="tt-field">
+  @if (label()) {
+    <span class="tt-field__label">{{ label() }}</span>
+  }
+  <select
+    class="tt-field__control"
+    [disabled]="disabled()"
+    [value]="value()"
+    (change)="onChange($event)"
+  >
+    @for (option of options(); track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+  @if (hint()) {
+    <span class="tt-field__hint">{{ hint() }}</span>
+  }
+</label>

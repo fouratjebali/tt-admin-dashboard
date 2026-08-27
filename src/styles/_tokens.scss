@@ -1,0 +1,53 @@
+// Base
+$cream: #f3eee1;
+$card: #ffffff;
+$forest: #1f3b33;
+$forest-2: #2c5348;
+
+// Text
+$ink: #17201b;
+$ink-soft: #5b6259;
+$ink-faint: #8b9088;
+
+// Structure
+$line: #e5dfcc;
+
+// Semantic - danger / suspended / down
+$terracotta: #b04a31;
+$terracotta-light: #f2dcd2;
+
+// Semantic - warning / pending / degraded
+$amber: #bd8535;
+$amber-light: #f3e4c7;
+
+// Semantic - success / active / up
+$sage: #4c7359;
+$sage-light: #e1ead8;
+
+// Semantic - info / secondary role
+$teal: #33625f;
+$teal-light: #dce8e5;
+
+$font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+$card-shadow: 0 3px 14px rgba(31, 59, 51, 0.08);
+
+:root {
+  --tt-cream: #{$cream};
+  --tt-card: #{$card};
+  --tt-forest: #{$forest};
+  --tt-forest-2: #{$forest-2};
+  --tt-ink: #{$ink};
+  --tt-ink-soft: #{$ink-soft};
+  --tt-ink-faint: #{$ink-faint};
+  --tt-line: #{$line};
+  --tt-terracotta: #{$terracotta};
+  --tt-terracotta-light: #{$terracotta-light};
+  --tt-amber: #{$amber};
+  --tt-amber-light: #{$amber-light};
+  --tt-sage: #{$sage};
+  --tt-sage-light: #{$sage-light};
+  --tt-teal: #{$teal};
+  --tt-teal-light: #{$teal-light};
+  --tt-font-family: #{$font-family};
+  --tt-card-shadow: #{$card-shadow};
+}

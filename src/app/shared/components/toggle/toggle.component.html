@@ -1,0 +1,14 @@
+<button
+  class="tt-toggle"
+  type="button"
+  role="switch"
+  [attr.aria-checked]="checked()"
+  [class.tt-toggle--checked]="checked()"
+  [disabled]="disabled()"
+  (click)="toggle()"
+>
+  <span class="tt-toggle__knob"></span>
+</button>
+@if (label()) {
+  <span class="tt-toggle__label">{{ label() }}</span>
+}

@@ -1,0 +1,13 @@
+<section class="tt-card">
+  @if (title()) {
+    <header class="tt-card__header">
+      <h2>{{ title() }}</h2>
+      <div class="tt-card__action">
+        <ng-content select="[card-action]" />
+      </div>
+    </header>
+  }
+  <div class="tt-card__body">
+    <ng-content />
+  </div>
+</section>

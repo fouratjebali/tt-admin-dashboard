@@ -1,0 +1,43 @@
+@use '../../../../styles/tokens' as *;
+
+.tt-modal {
+  align-items: center;
+  background: rgba(23, 32, 27, 0.36);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 30;
+}
+
+.tt-modal__dialog {
+  background: $card;
+  border: 1px solid $line;
+  border-radius: 10px;
+  box-shadow: $card-shadow;
+  max-width: 360px;
+  padding: 12px;
+  width: min(100%, 360px);
+}
+
+.tt-modal__copy h2 {
+  color: $ink;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0 0 7px;
+}
+
+.tt-modal__copy p {
+  color: $ink-soft;
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.tt-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 13px;
+}

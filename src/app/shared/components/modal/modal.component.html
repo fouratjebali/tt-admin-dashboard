@@ -1,0 +1,16 @@
+@if (open()) {
+  <div class="tt-modal" role="presentation">
+    <section class="tt-modal__dialog" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+      <div class="tt-modal__copy">
+        <h2>{{ title() }}</h2>
+        <p>{{ message() }}</p>
+      </div>
+      <footer class="tt-modal__actions">
+        <tt-button variant="ghost" (click)="dismiss.emit()">{{ cancelLabel() }}</tt-button>
+        <tt-button [variant]="confirmVariant()" (click)="confirm.emit()">
+          {{ confirmLabel() }}
+        </tt-button>
+      </footer>
+    </section>
+  </div>
+}

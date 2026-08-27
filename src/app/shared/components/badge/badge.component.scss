@@ -1,0 +1,42 @@
+@use '../../../../styles/tokens' as *;
+
+.tt-badge {
+  border-radius: 20px;
+  display: inline-flex;
+  font-size: 7px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tt-badge--active,
+.tt-badge--on,
+.tt-badge--up {
+  background: $sage-light;
+  color: $sage;
+}
+
+.tt-badge--pending,
+.tt-badge--degraded {
+  background: $amber-light;
+  color: $amber;
+}
+
+.tt-badge--suspended,
+.tt-badge--down,
+.tt-badge--off {
+  background: $terracotta-light;
+  color: $terracotta;
+}
+
+.tt-badge--role {
+  background: $forest;
+  color: $cream;
+}
+
+.tt-badge--role-support {
+  background: $teal-light;
+  color: $teal;
+}

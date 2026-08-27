@@ -1,0 +1,48 @@
+@use '../../../../styles/tokens' as *;
+
+:host {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+}
+
+.tt-toggle {
+  background: $line;
+  border: 0;
+  border-radius: 20px;
+  cursor: pointer;
+  height: 20px;
+  padding: 2px;
+  position: relative;
+  transition: background 0.16s ease;
+  width: 36px;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+.tt-toggle__knob {
+  background: $card;
+  border-radius: 50%;
+  display: block;
+  height: 16px;
+  transition: transform 0.16s ease;
+  width: 16px;
+}
+
+.tt-toggle--checked {
+  background: $forest;
+
+  .tt-toggle__knob {
+    background: $cream;
+    transform: translateX(16px);
+  }
+}
+
+.tt-toggle__label {
+  color: $ink-soft;
+  font-size: 10px;
+  font-weight: 700;
+}

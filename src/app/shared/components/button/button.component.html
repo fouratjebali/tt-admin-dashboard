@@ -1,0 +1,6 @@
+<button class="tt-button" [class]="'tt-button tt-button--' + variant()" [disabled]="disabled()">
+  @if (icon()) {
+    <tt-icon class="tt-button__icon" [name]="icon()!" />
+  }
+  <span class="tt-button__label"><ng-content /></span>
+</button>

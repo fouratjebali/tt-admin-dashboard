@@ -1,0 +1,70 @@
+import { Component, computed, input } from '@angular/core';
+
+const ICON_PATHS: Record<string, string[]> = {
+  admins: ['M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0', 'M6 21v-2a4 4 0 0 1 4 -4h4'],
+  audit: [
+    'M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2',
+    'M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z',
+    'M9 12h6',
+    'M9 16h6',
+  ],
+  bell: [
+    'M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3l2 3h-16l2 -3v-3a7 7 0 0 1 4 -6',
+    'M9 17v1a3 3 0 0 0 6 0v-1',
+  ],
+  chart: ['M4 19l16 0', 'M4 15l4 -6l4 3l4 -8l4 5'],
+  dashboard: ['M4 4h6v8h-6z', 'M14 4h6v4h-6z', 'M14 12h6v8h-6z', 'M4 16h6v4h-6z'],
+  health: ['M12 21s-7 -4.438 -9 -10a5 5 0 0 1 9 -4a5 5 0 0 1 9 4c-2 5.562 -9 10 -9 10', 'M9 12h6'],
+  mail: [
+    'M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z',
+    'M3 7l9 6l9 -6',
+  ],
+  moon: ['M12 3c.132 0 .263 .003 .393 .009a7.5 7.5 0 1 0 8.598 8.598a9 9 0 1 1 -8.991 -8.607'],
+  settings: [
+    'M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z',
+    'M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0',
+  ],
+  users: [
+    'M9 7a4 4 0 1 0 0.01 0',
+    'M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2',
+    'M16 11h6',
+    'M19 8v6',
+  ],
+};
+
+@Component({
+  selector: 'tt-icon',
+  template: `
+    <svg
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="1.8"
+      viewBox="0 0 24 24"
+    >
+      @for (path of paths(); track path) {
+        <path [attr.d]="path" />
+      }
+    </svg>
+  `,
+  styles: [
+    `
+      :host {
+        display: inline-flex;
+        width: 1em;
+        height: 1em;
+      }
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    `,
+  ],
+})
+export class TtIconComponent {
+  readonly name = input.required<string>();
+  protected readonly paths = computed(() => ICON_PATHS[this.name()] ?? ICON_PATHS['dashboard']);
+}

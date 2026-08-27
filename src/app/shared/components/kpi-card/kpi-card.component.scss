@@ -1,0 +1,56 @@
+@use '../../../../styles/tokens' as *;
+
+.tt-kpi {
+  display: grid;
+  gap: 4px;
+}
+
+.tt-kpi__icon {
+  align-items: center;
+  border-radius: 50%;
+  display: inline-flex;
+  font-size: 15px;
+  height: 28px;
+  justify-content: center;
+  margin-bottom: 3px;
+  width: 28px;
+}
+
+.tt-kpi__icon--sage {
+  background: $sage-light;
+  color: $sage;
+}
+
+.tt-kpi__icon--amber {
+  background: $amber-light;
+  color: $amber;
+}
+
+.tt-kpi__icon--terra {
+  background: $terracotta-light;
+  color: $terracotta;
+}
+
+.tt-kpi__icon--teal {
+  background: $teal-light;
+  color: $teal;
+}
+
+.tt-kpi__value {
+  color: $ink;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tt-kpi__label {
+  color: $ink;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.tt-kpi__sublabel {
+  color: $ink-faint;
+  font-size: 8px;
+  font-weight: 700;
+}

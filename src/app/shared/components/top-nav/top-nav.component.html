@@ -1,0 +1,37 @@
+<header class="tt-top-nav">
+  <a class="tt-top-nav__brand" routerLink="/">
+    <span class="tt-top-nav__mark">TT</span>
+    <span class="tt-top-nav__wordmark">TT Admin</span>
+  </a>
+
+  <nav class="tt-top-nav__links" aria-label="Primary">
+    @for (item of navItems; track item.route) {
+      <a
+        class="tt-top-nav__link"
+        [routerLink]="item.route"
+        routerLinkActive="tt-top-nav__link--active"
+        [routerLinkActiveOptions]="{ exact: item.exact }"
+        ariaCurrentWhenActive="page"
+      >
+        <tt-icon [name]="item.icon" />
+        <span>{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <div class="tt-top-nav__tools">
+    <button class="tt-top-nav__icon-button" type="button" aria-label="Dark mode">
+      <tt-icon name="moon" />
+    </button>
+    <button class="tt-top-nav__icon-button" type="button" aria-label="Notifications">
+      <tt-icon name="bell" />
+    </button>
+    <div class="tt-top-nav__profile">
+      <span class="tt-top-nav__avatar">IT</span>
+      <span class="tt-top-nav__identity">
+        <strong>Admin User</strong>
+        <small>Operations</small>
+      </span>
+    </div>
+  </div>
+</header>

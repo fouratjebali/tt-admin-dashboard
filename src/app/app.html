@@ -1,0 +1,7 @@
+@if (!isLoginRoute()) {
+  <tt-top-nav />
+}
+
+<main class="app-shell" [class.app-shell--authenticated]="!isLoginRoute()">
+  <router-outlet />
+</main>
