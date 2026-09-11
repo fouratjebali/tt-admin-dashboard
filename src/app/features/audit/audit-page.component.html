@@ -1,0 +1,176 @@
+<section class="audit-page">
+  <header class="audit-heading">
+    <div>
+      <span class="audit-heading__eyebrow">
+        <svg lucideScrollText size="15"></svg>
+        {{ copy().eyebrow }}
+      </span>
+      <h1>{{ copy().title }}</h1>
+      <p>{{ copy().body }}</p>
+    </div>
+
+    <div class="audit-heading__actions">
+      <button
+        class="audit-button audit-button--ghost"
+        type="button"
+        [disabled]="filteredLogs().length === 0"
+        (click)="exportCsv()"
+      >
+        <svg lucideDownload size="16"></svg>
+        {{ copy().export }}
+      </button>
+      <button
+        class="audit-button audit-button--ghost"
+        type="button"
+        [disabled]="loading()"
+        (click)="loadAuditLogs()"
+      >
+        <svg lucideRefreshCw size="16"></svg>
+        {{ copy().refresh }}
+      </button>
+    </div>
+  </header>
+
+  <div class="audit-stats">
+    @for (stat of stats(); track stat.label) {
+      <article class="audit-stat" [class]="'audit-stat audit-stat--' + stat.tone">
+        <span class="audit-stat__icon">
+          @switch (stat.tone) {
+            @case ('success') {
+              <svg lucideUserRoundSearch size="18"></svg>
+            }
+            @case ('accent') {
+              <svg lucideCalendarDays size="18"></svg>
+            }
+            @case ('warning') {
+              <svg lucideDatabase size="18"></svg>
+            }
+            @default {
+              <svg lucideShieldCheck size="18"></svg>
+            }
+          }
+        </span>
+        <span>{{ stat.label }}</span>
+        <strong>{{ stat.value }}</strong>
+      </article>
+    }
+  </div>
+
+  <section class="audit-panel">
+    <div class="audit-toolbar">
+      <label class="audit-search">
+        <svg lucideSearch size="16"></svg>
+        <input
+          [value]="searchTerm()"
+          type="search"
+          [placeholder]="copy().search"
+          (input)="updateSearch($event)"
+        />
+      </label>
+
+      <div class="audit-filters">
+        <label>
+          <span>{{ copy().actionFilter }}</span>
+          <select [value]="actionFilter()" (change)="updateActionFilter($event)">
+            <option value="all">{{ copy().allActions }}</option>
+            @for (action of actionOptions(); track action) {
+              <option [value]="action">{{ formatAction(action) }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>{{ copy().resourceFilter }}</span>
+          <select [value]="resourceFilter()" (change)="updateResourceFilter($event)">
+            <option value="all">{{ copy().allResources }}</option>
+            @for (resource of resourceOptions(); track resource) {
+              <option [value]="resource">{{ resource }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="audit-alert" role="alert">
+        <span>
+          <svg lucideCircleAlert size="15"></svg>
+          {{ error() }}
+        </span>
+        <button type="button" (click)="loadAuditLogs()">{{ copy().retry }}</button>
+      </div>
+    }
+
+    <div class="audit-table" role="table">
+      <div class="audit-table__head" role="row">
+        <span role="columnheader">{{ copy().actor }}</span>
+        <span role="columnheader">{{ copy().action }}</span>
+        <span role="columnheader">{{ copy().resource }}</span>
+        <span role="columnheader">{{ copy().details }}</span>
+        <span role="columnheader">{{ copy().date }}</span>
+      </div>
+
+      @if (loading()) {
+        <div class="audit-loading">
+          <span></span>
+          {{ copy().loading }}
+        </div>
+      } @else if (filteredLogs().length === 0) {
+        <div class="audit-empty">
+          <svg lucideFileSearch size="24"></svg>
+          <strong>{{ copy().emptyTitle }}</strong>
+          <span>{{ copy().emptyBody }}</span>
+        </div>
+      } @else {
+        @for (log of filteredLogs(); track log.id) {
+          <div class="audit-table__row" role="row">
+            <div class="audit-actor" role="cell">
+              <span class="audit-actor__icon">
+                <svg lucideBadgeCheck size="15"></svg>
+              </span>
+              <span>
+                <strong>{{ actorLabel(log) }}</strong>
+                <small>{{ log.actor_user_id || log.id }}</small>
+              </span>
+            </div>
+
+            <span role="cell">
+              <mark class="audit-action">
+                <svg lucideListFilter size="13"></svg>
+                {{ formatAction(log.action) }}
+              </mark>
+            </span>
+
+            <span class="audit-resource" role="cell">{{ resourceLabel(log) }}</span>
+            <span class="audit-details" role="cell">{{ metadataSummary(log) }}</span>
+            <time role="cell">{{ formatDate(log.created_at) }}</time>
+          </div>
+        }
+      }
+    </div>
+
+    <footer class="audit-pagination">
+      <span
+        >{{ copy().range }} {{ pageStart() }}-{{ pageEnd() }} {{ copy().of }} {{ total() }}</span
+      >
+      <div>
+        <button
+          type="button"
+          [disabled]="!canGoPrevious()"
+          [attr.aria-label]="copy().previous"
+          (click)="previousPage()"
+        >
+          <svg lucideChevronLeft size="16"></svg>
+        </button>
+        <button
+          type="button"
+          [disabled]="!canGoNext()"
+          [attr.aria-label]="copy().next"
+          (click)="nextPage()"
+        >
+          <svg lucideChevronRight size="16"></svg>
+        </button>
+      </div>
+    </footer>
+  </section>
+</section>
