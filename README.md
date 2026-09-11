@@ -74,12 +74,15 @@ The app reads the API base URL from:
 - `src/environments/environment.development.ts` for local development.
 - `src/environments/environment.ts` for production builds.
 
-For local development, the backend should run on `http://localhost:8000` and the
-Angular API base URL should be:
+For local development, the backend should run on `http://localhost:8000`. Angular
+uses `proxy.conf.json`, so browser requests stay on the Angular origin and are
+forwarded to the backend by the dev server.
+
+The local Angular API base URL should be:
 
 ```ts
 export const environment = {
-  apiBaseUrl: 'http://localhost:8000/api/v1',
+  apiBaseUrl: '/api/v1',
 };
 ```
 
@@ -140,6 +143,9 @@ Start the Angular dev server:
 ```sh
 npm start
 ```
+
+`npm start` automatically uses `proxy.conf.json`, forwarding `/api/*` to
+`http://localhost:8000`.
 
 Open:
 
@@ -261,5 +267,5 @@ npx ng test --watch=false --browsers=ChromeHeadless
 If port `4200` is already used, run on another port:
 
 ```sh
-npx ng serve --port 4300
+npx ng serve --port 4300 --proxy-config proxy.conf.json
 ```
