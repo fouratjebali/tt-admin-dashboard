@@ -13,7 +13,6 @@ import {
   LucideMoon,
   LucideSearch,
   LucideSettings,
-  LucideShieldCheck,
   LucideSun,
   LucideUserCog,
   LucideUsers,
@@ -33,7 +32,6 @@ interface NavItem {
 const LAYOUT_COPY = {
   en: {
     workspace: 'Admin workspace',
-    status: 'Backend connected',
     search: 'Search users, drafts, imports',
     primaryNav: 'Primary navigation',
     controls: 'Workspace controls',
@@ -61,7 +59,6 @@ const LAYOUT_COPY = {
   },
   fr: {
     workspace: 'Espace admin',
-    status: 'Backend connecte',
     search: 'Rechercher users, drafts, imports',
     primaryNav: 'Navigation principale',
     controls: 'Controles espace',
@@ -106,7 +103,6 @@ const LAYOUT_COPY = {
     LucideMoon,
     LucideSearch,
     LucideSettings,
-    LucideShieldCheck,
     LucideSun,
     LucideUserCog,
     LucideUsers,

@@ -226,20 +226,6 @@
   color: var(--tt-ink-faint);
 }
 
-.admin-topbar__status {
-  align-items: center;
-  background: var(--tt-sage-light);
-  border-radius: 8px;
-  color: var(--tt-sage);
-  display: inline-flex;
-  font-size: 10px;
-  font-weight: 800;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 10px;
-  white-space: nowrap;
-}
-
 .admin-language {
   align-items: center;
   background: var(--tt-card);
@@ -330,10 +316,6 @@
 }
 
 @media (max-width: 1080px) {
-  .admin-topbar__status {
-    display: none;
-  }
-
   .admin-profile__text,
   .admin-profile svg {
     display: none;
