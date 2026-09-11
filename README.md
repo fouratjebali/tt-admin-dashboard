@@ -74,7 +74,7 @@ The app reads the API base URL from:
 - `src/environments/environment.development.ts` for local development.
 - `src/environments/environment.ts` for production builds.
 
-For local development, the backend should run on `http://localhost:8000`. Angular
+For local development, the backend should run on `http://127.0.0.1:8000`. Angular
 uses `proxy.conf.json`, so browser requests stay on the Angular origin and are
 forwarded to the backend by the dev server.
 
@@ -145,7 +145,7 @@ npm start
 ```
 
 `npm start` automatically uses `proxy.conf.json`, forwarding `/api/*` to
-`http://localhost:8000`.
+`http://127.0.0.1:8000`.
 
 Open:
 
@@ -269,3 +269,13 @@ If port `4200` is already used, run on another port:
 ```sh
 npx ng serve --port 4300 --proxy-config proxy.conf.json
 ```
+
+If the login page says the admin API is inaccessible but Docker shows the
+backend container running, check the backend logs:
+
+```sh
+docker logs --tail 80 tt_mail_backend
+```
+
+If the log says `Form data requires "python-multipart" to be installed`, add
+`python-multipart` to the backend dependencies and rebuild the backend image.
