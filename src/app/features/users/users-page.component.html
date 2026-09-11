@@ -1,0 +1,190 @@
+<section class="users-page">
+  <header class="users-heading">
+    <div>
+      <span class="users-heading__eyebrow">
+        <svg lucideUsers size="15"></svg>
+        {{ copy().eyebrow }}
+      </span>
+      <h1>{{ copy().title }}</h1>
+      <p>{{ copy().body }}</p>
+    </div>
+
+    <div class="users-heading__actions">
+      <button
+        class="users-button users-button--ghost"
+        type="button"
+        [disabled]="loading()"
+        (click)="loadUsers()"
+      >
+        <svg lucideRefreshCw size="16"></svg>
+        {{ copy().refresh }}
+      </button>
+    </div>
+  </header>
+
+  <div class="users-stats">
+    @for (stat of stats(); track stat.label) {
+      <article class="users-stat" [class]="'users-stat users-stat--' + stat.tone">
+        <span class="users-stat__icon">
+          @switch (stat.tone) {
+            @case ('success') {
+              <svg lucideCircleCheck size="18"></svg>
+            }
+            @case ('accent') {
+              <svg lucideShieldCheck size="18"></svg>
+            }
+            @case ('warning') {
+              <svg lucideCircleOff size="18"></svg>
+            }
+            @default {
+              <svg lucideUsers size="18"></svg>
+            }
+          }
+        </span>
+        <span>{{ stat.label }}</span>
+        <strong>{{ stat.value }}</strong>
+      </article>
+    }
+  </div>
+
+  <section class="users-panel">
+    <div class="users-toolbar">
+      <label class="users-search">
+        <svg lucideSearch size="16"></svg>
+        <input
+          [value]="searchTerm()"
+          type="search"
+          [placeholder]="copy().search"
+          (input)="updateSearch($event)"
+        />
+      </label>
+
+      <div class="users-filters">
+        <label>
+          <span>{{ copy().roleFilter }}</span>
+          <select [value]="roleFilter()" (change)="updateRoleFilter($event)">
+            <option value="all">{{ copy().allRoles }}</option>
+            @for (role of roles; track role) {
+              <option [value]="role">{{ role }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>{{ copy().statusFilter }}</span>
+          <select [value]="statusFilter()" (change)="updateStatusFilter($event)">
+            <option value="all">{{ copy().allStatuses }}</option>
+            <option value="active">{{ copy().active }}</option>
+            <option value="inactive">{{ copy().inactive }}</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="users-alert" role="alert">
+        <span>{{ error() }}</span>
+        <button type="button" (click)="loadUsers()">{{ copy().retry }}</button>
+      </div>
+    }
+
+    <div class="users-table" role="table">
+      <div class="users-table__head" role="row">
+        <span role="columnheader">{{ copy().user }}</span>
+        <span role="columnheader">{{ copy().role }}</span>
+        <span role="columnheader">{{ copy().status }}</span>
+        <span role="columnheader">{{ copy().lastLogin }}</span>
+        <span role="columnheader">{{ copy().created }}</span>
+        <span role="columnheader">{{ copy().actions }}</span>
+      </div>
+
+      @if (loading()) {
+        <div class="users-loading">
+          <span></span>
+          {{ copy().loading }}
+        </div>
+      } @else if (filteredUsers().length === 0) {
+        <div class="users-empty">
+          <svg lucideUserCog size="24"></svg>
+          <strong>{{ copy().emptyTitle }}</strong>
+          <span>{{ copy().emptyBody }}</span>
+        </div>
+      } @else {
+        @for (user of filteredUsers(); track userId(user)) {
+          <div class="users-table__row" role="row">
+            <div class="users-user" role="cell">
+              <span class="users-user__avatar">{{ userInitials(user) }}</span>
+              <span>
+                <strong>{{ displayName(user) }}</strong>
+                <small>{{ user.email }}</small>
+              </span>
+            </div>
+
+            <span role="cell">
+              <select
+                class="users-role-select"
+                [value]="user.role"
+                [disabled]="isSaving(user, 'role')"
+                (change)="changeUserRole(user, $event)"
+              >
+                @for (role of roles; track role) {
+                  <option [value]="role">{{ role }}</option>
+                }
+              </select>
+            </span>
+
+            <span role="cell">
+              <mark class="users-status" [class.users-status--inactive]="!user.is_active">
+                @if (user.is_active) {
+                  <svg lucideCircleCheck size="13"></svg>
+                  {{ copy().active }}
+                } @else {
+                  <svg lucideCircleOff size="13"></svg>
+                  {{ copy().inactive }}
+                }
+              </mark>
+            </span>
+
+            <time role="cell">{{ formatDate(user.last_login_at) }}</time>
+            <time role="cell">{{ formatDate(user.created_at) }}</time>
+
+            <span role="cell">
+              <button
+                class="users-action"
+                type="button"
+                [disabled]="isSaving(user, 'status')"
+                (click)="toggleUserStatus(user)"
+              >
+                {{ user.is_active ? copy().deactivate : copy().activate }}
+              </button>
+            </span>
+          </div>
+        }
+      }
+    </div>
+
+    <footer class="users-pagination">
+      <span
+        >{{ copy().range }} {{ pageStart() }}-{{ pageEnd() }} {{ copy().of }} {{ total() }}</span
+      >
+      <div>
+        <button
+          type="button"
+          [disabled]="!canGoPrevious()"
+          [attr.aria-label]="copy().previous"
+          (click)="previousPage()"
+        >
+          <svg lucideChevronLeft size="16"></svg>
+        </button>
+        <button
+          type="button"
+          [disabled]="!canGoNext()"
+          [attr.aria-label]="copy().next"
+          (click)="nextPage()"
+        >
+          <svg lucideChevronRight size="16"></svg>
+        </button>
+      </div>
+    </footer>
+  </section>
+</section>

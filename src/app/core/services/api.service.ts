@@ -53,8 +53,8 @@ export class ApiService {
     return this.http.get<AdminOverview>(this.adminUrl('/overview'));
   }
 
-  listUsers(filters?: ApiFilters): Observable<PaginatedResponse<AdminUser>> {
-    return this.http.get<PaginatedResponse<AdminUser>>(this.adminUrl('/users'), {
+  listUsers(filters?: ApiFilters): Observable<PaginatedResponse<AdminUser> | AdminUser[]> {
+    return this.http.get<PaginatedResponse<AdminUser> | AdminUser[]>(this.adminUrl('/users'), {
       params: this.buildParams(filters),
     });
   }

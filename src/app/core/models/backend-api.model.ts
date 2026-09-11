@@ -40,7 +40,8 @@ export interface AdminOverview {
 }
 
 export interface AdminUser {
-  id: string;
+  id?: string;
+  user_id?: string;
   email: string;
   full_name?: string;
   role: AdminRole;
