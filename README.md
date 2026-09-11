@@ -64,22 +64,36 @@ npm install --strict-ssl=false
 This uses a command-level workaround only. Do not commit npm registry or SSL
 configuration changes.
 
-## 4. Configure the backend URL
+## 4. Configure backend and Microsoft auth
 
-The app reads the API base URL from:
+The Angular app talks only to the backend API. It must not connect directly to
+PostgreSQL; the backend owns database access through its `DATABASE_URL`.
+
+The app reads integration settings from:
 
 - `src/environments/environment.development.ts` for local development.
 - `src/environments/environment.ts` for production builds.
 
-For local development, edit `src/environments/environment.development.ts`:
+For local development, the backend should run on `http://localhost:8000` and the
+Angular API base URL should be:
 
 ```ts
 export const environment = {
-  apiBaseUrl: 'http://localhost:3000',
+  apiBaseUrl: 'http://localhost:8000/api/v1',
+  microsoftAuth: {
+    clientId: '<azure-app-client-id>',
+    tenantId: 'common',
+    redirectUri: 'http://localhost:4200/login',
+    scopes: ['openid', 'profile', 'email', 'User.Read'],
+  },
 };
 ```
 
-All admin API requests are sent below:
+Replace `<azure-app-client-id>` with the Azure application client ID configured
+for Microsoft/Outlook OAuth. The backend validates access and roles from its
+`users` table.
+
+Admin API requests are sent below:
 
 ```txt
 ${apiBaseUrl}/admin/*
@@ -87,13 +101,16 @@ ${apiBaseUrl}/admin/*
 
 Examples:
 
-- `POST /admin/auth/login`
-- `GET /admin/users`
-- `GET /admin/health`
-- `GET /admin/settings`
-- `GET /admin/audit`
-- `GET /admin/admins`
-- `GET /admin/dashboard`
+- `POST /api/v1/auth/microsoft`
+- `POST /api/v1/auth/refresh`
+- `GET /api/v1/auth/me`
+- `GET /api/v1/admin/me`
+- `GET /api/v1/admin/overview`
+- `GET /api/v1/admin/users`
+- `GET /api/v1/admin/audit-logs`
+- `GET /api/v1/admin/planning/imports`
+- `GET /api/v1/admin/planning/sessions`
+- `GET /api/v1/admin/planning/drafts`
 
 ## 5. Run the project
 
@@ -109,8 +126,8 @@ Open:
 http://localhost:4200/
 ```
 
-Protected routes redirect to `/login` until an auth token is present in browser
-storage. The Login page is still a Sprint 2 placeholder.
+Protected routes redirect to `/login` until a backend `session_token` is present
+and validated with `GET /api/v1/auth/me`.
 
 ## 6. Useful commands
 
@@ -171,7 +188,7 @@ src/app/
   shared/
     components/     reusable design-system components
   features/
-    login/          route placeholder
+    login/          Microsoft admin sign-in route
     dashboard/      route placeholder
     users/          route placeholder
     health/         route placeholder

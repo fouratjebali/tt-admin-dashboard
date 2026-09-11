@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
+import { AuthService } from '../../../core/services/auth.service';
 import { Language, PreferencesService } from '../../../core/services/preferences.service';
 import { TtIconComponent } from '../icon/icon.component';
 
@@ -24,21 +25,25 @@ const NAV_LABELS = {
     lightMode: 'Switch to light mode',
     notifications: 'Notifications',
     languageSelector: 'Language selector',
+    logout: 'Sign out',
     role: 'Operations',
+    fallbackName: 'Admin user',
   },
   fr: {
     dashboard: 'Tableau',
     users: 'Utilisateurs',
-    health: 'Santé',
-    settings: 'Paramètres',
+    health: 'Sante',
+    settings: 'Parametres',
     audit: 'Audit',
     admins: 'Admins',
     primaryNav: 'Navigation principale',
     darkMode: 'Activer le mode sombre',
     lightMode: 'Activer le mode clair',
     notifications: 'Notifications',
-    languageSelector: 'Sélecteur de langue',
-    role: 'Opérations',
+    languageSelector: 'Selecteur de langue',
+    logout: 'Deconnexion',
+    role: 'Operations',
+    fallbackName: 'Admin user',
   },
 };
 
@@ -49,8 +54,25 @@ const NAV_LABELS = {
   styleUrl: './top-nav.component.scss',
 })
 export class TtTopNavComponent {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
   protected readonly preferences = inject(PreferencesService);
   protected readonly copy = computed(() => NAV_LABELS[this.preferences.language()]);
+  protected readonly currentAdmin = this.authService.currentAdmin;
+  protected readonly adminDisplayName = computed(
+    () => this.currentAdmin()?.full_name ?? this.currentAdmin()?.name ?? this.copy().fallbackName,
+  );
+  protected readonly adminRole = computed(() => this.currentAdmin()?.role ?? this.copy().role);
+  protected readonly adminInitials = computed(() => {
+    const initials = this.adminDisplayName()
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('');
+
+    return initials || 'IT';
+  });
 
   protected readonly navItems: NavItem[] = [
     { labelKey: 'dashboard', route: '/', icon: 'dashboard', exact: true },
@@ -63,5 +85,10 @@ export class TtTopNavComponent {
 
   protected setLanguage(language: Language): void {
     this.preferences.setLanguage(language);
+  }
+
+  protected logout(): void {
+    this.authService.logout();
+    void this.router.navigate(['/login']);
   }
 }

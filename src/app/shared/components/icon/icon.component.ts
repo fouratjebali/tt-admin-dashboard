@@ -32,6 +32,7 @@ const ICON_PATHS: Record<string, string[]> = {
     'M15 7h.01',
   ],
   lock: ['M5 11h14v9h-14z', 'M8 11v-4a4 4 0 0 1 8 0v4'],
+  logout: ['M10 6h-4a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h4', 'M14 16l4 -4l-4 -4', 'M18 12h-9'],
   mail: [
     'M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z',
     'M3 7l9 6l9 -6',

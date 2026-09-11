@@ -1,10 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
-import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Language, PreferencesService } from '../../core/services/preferences.service';
 import { TtIconComponent } from '../../shared/components/icon/icon.component';
@@ -14,91 +12,70 @@ const LOGIN_COPY = {
     secureAccess: 'Secure admin access',
     headline: 'Supervise AI-assisted mail operations with confidence.',
     summary:
-      'Monitor employee access, Gmail agent health, global controls, and audit activity from one focused internal workspace.',
+      'Monitor employee access, Outlook agent health, global controls, and audit activity from one focused internal workspace.',
     emailsTriaged: 'Emails triaged',
     agentUptime: 'Agent uptime',
     reviewFlags: 'Review flags',
-    signIn: 'Sign in',
-    instruction: 'Use your administrator account.',
-    email: 'Email address',
-    emailPlaceholder: 'admin@tt.tn',
-    emailError: 'Enter a valid admin email address.',
-    password: 'Password',
-    passwordPlaceholder: 'Minimum 6 characters',
-    passwordError: 'Password must be at least 6 characters.',
+    signIn: 'Admin sign in',
+    instruction: 'Continue with your Microsoft Outlook account to start a backend admin session.',
     rememberDevice: 'Remember this device',
     needAccess: 'Need access?',
-    signingIn: 'Signing in',
-    submit: 'Sign in to dashboard',
-    footnote: 'Access is limited to authorized Tunisie Telecom IT administrators.',
-    showPassword: 'Show password',
-    hidePassword: 'Hide password',
+    signingIn: 'Opening Microsoft',
+    submit: 'Continue with Microsoft',
+    footnote: 'Access is limited to active users with admin, reviewer, or viewer roles.',
     darkMode: 'Switch to dark mode',
     lightMode: 'Switch to light mode',
     displayPreferences: 'Display preferences',
     languageSelector: 'Language selector',
-    errorGeneric: 'Sign-in failed. Please try again.',
+    errorGeneric: 'Microsoft sign-in failed. Please try again.',
+    errorMissingConfig: 'Microsoft OAuth is not configured yet. Add the Azure client ID.',
     errorNetwork: 'Unable to reach the admin API. Check the backend URL and network.',
-    errorCredentials: 'The email or password is incorrect.',
+    errorCredentials: 'Your account is not authorized for this admin dashboard.',
     errorApi: 'The admin API could not complete sign-in. Please try again.',
   },
   fr: {
-    secureAccess: 'Accès admin sécurisé',
-    headline: 'Supervisez les opérations mail assistées par IA en toute confiance.',
+    secureAccess: 'Acces admin securise',
+    headline: 'Supervisez les operations mail assistees par IA en toute confiance.',
     summary:
-      'Surveillez les accès employés, la santé des agents Gmail, les contrôles globaux et les audits depuis un espace interne clair.',
-    emailsTriaged: 'Emails triés',
-    agentUptime: 'Disponibilité agent',
-    reviewFlags: 'Alertes à vérifier',
-    signIn: 'Connexion',
-    instruction: 'Utilisez votre compte administrateur.',
-    email: 'Adresse email',
-    emailPlaceholder: 'admin@tt.tn',
-    emailError: 'Saisissez une adresse email admin valide.',
-    password: 'Mot de passe',
-    passwordPlaceholder: 'Minimum 6 caractères',
-    passwordError: 'Le mot de passe doit contenir au moins 6 caractères.',
-    rememberDevice: 'Mémoriser cet appareil',
-    needAccess: "Besoin d'accès ?",
-    signingIn: 'Connexion',
-    submit: 'Acceder au tableau de bord',
-    footnote: 'Accès réservé aux administrateurs IT autorisés de Tunisie Telecom.',
-    showPassword: 'Afficher le mot de passe',
-    hidePassword: 'Masquer le mot de passe',
+      'Surveillez les acces employes, la sante des agents Outlook, les controles globaux et les audits depuis un espace interne clair.',
+    emailsTriaged: 'Emails tries',
+    agentUptime: 'Disponibilite agent',
+    reviewFlags: 'Alertes a verifier',
+    signIn: 'Connexion admin',
+    instruction:
+      'Continuez avec votre compte Microsoft Outlook pour ouvrir une session admin backend.',
+    rememberDevice: 'Memoriser cet appareil',
+    needAccess: "Besoin d'acces ?",
+    signingIn: 'Ouverture Microsoft',
+    submit: 'Continuer avec Microsoft',
+    footnote: 'Acces limite aux utilisateurs actifs avec les roles admin, reviewer ou viewer.',
     darkMode: 'Activer le mode sombre',
     lightMode: 'Activer le mode clair',
-    displayPreferences: "Préférences d'affichage",
-    languageSelector: 'Sélecteur de langue',
-    errorGeneric: 'La connexion a échoué. Veuillez réessayer.',
-    errorNetwork: "API admin inaccessible. Vérifiez l'URL backend et le réseau.",
-    errorCredentials: 'Email ou mot de passe incorrect.',
-    errorApi: "L'API admin n'a pas pu finaliser la connexion. Veuillez réessayer.",
+    displayPreferences: "Preferences d'affichage",
+    languageSelector: 'Selecteur de langue',
+    errorGeneric: 'La connexion Microsoft a echoue. Veuillez reessayer.',
+    errorMissingConfig: "Microsoft OAuth n'est pas encore configure. Ajoutez le client ID Azure.",
+    errorNetwork: "API admin inaccessible. Verifiez l'URL backend et le reseau.",
+    errorCredentials: "Votre compte n'est pas autorise pour ce tableau de bord admin.",
+    errorApi: "L'API admin n'a pas pu finaliser la connexion. Veuillez reessayer.",
   },
 };
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, TtIconComponent],
+  imports: [TtIconComponent],
   templateUrl: './login-page.component.html',
 })
 export class LoginPageComponent {
-  private readonly apiService = inject(ApiService);
   private readonly authService = inject(AuthService);
-  private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly preferences = inject(PreferencesService);
 
   protected readonly isSubmitting = signal(false);
-  protected readonly passwordVisible = signal(false);
+  protected readonly rememberDevice = signal(true);
   protected readonly authError = signal('');
   protected readonly copy = computed(() => LOGIN_COPY[this.preferences.language()]);
-
-  protected readonly loginForm = this.formBuilder.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
-    rememberDevice: [true],
-  });
 
   constructor() {
     if (this.authService.isAuthenticated()) {
@@ -106,23 +83,15 @@ export class LoginPageComponent {
     }
   }
 
-  protected submit(): void {
-    if (this.loginForm.invalid) {
-      this.loginForm.markAllAsTouched();
-      return;
-    }
-
-    const { email, password, rememberDevice } = this.loginForm.getRawValue();
-
+  protected signInWithMicrosoft(): void {
     this.authError.set('');
     this.isSubmitting.set(true);
 
-    this.apiService
-      .login(email, password)
+    this.authService
+      .signInWithMicrosoft(this.rememberDevice())
       .pipe(finalize(() => this.isSubmitting.set(false)))
       .subscribe({
-        next: ({ token }) => {
-          this.authService.login(token, rememberDevice);
+        next: () => {
           void this.router.navigateByUrl(this.returnUrl());
         },
         error: (error: unknown) => {
@@ -131,17 +100,13 @@ export class LoginPageComponent {
       });
   }
 
-  protected togglePasswordVisibility(): void {
-    this.passwordVisible.update((visible) => !visible);
+  protected setRememberDevice(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.rememberDevice.set(input.checked);
   }
 
   protected setLanguage(language: Language): void {
     this.preferences.setLanguage(language);
-  }
-
-  protected hasError(controlName: 'email' | 'password'): boolean {
-    const control = this.loginForm.controls[controlName];
-    return control.invalid && (control.dirty || control.touched);
   }
 
   private returnUrl(): string {
@@ -149,6 +114,10 @@ export class LoginPageComponent {
   }
 
   private errorMessage(error: unknown): string {
+    if (error instanceof Error && error.message.includes('Microsoft OAuth is not configured')) {
+      return this.copy().errorMissingConfig;
+    }
+
     if (!(error instanceof HttpErrorResponse)) {
       return this.copy().errorGeneric;
     }

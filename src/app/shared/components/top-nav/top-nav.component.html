@@ -48,11 +48,19 @@
       <tt-icon name="bell" />
     </button>
     <div class="tt-top-nav__profile">
-      <span class="tt-top-nav__avatar">IT</span>
+      <span class="tt-top-nav__avatar">{{ adminInitials() }}</span>
       <span class="tt-top-nav__identity">
-        <strong>Admin User</strong>
-        <small>{{ copy().role }}</small>
+        <strong>{{ adminDisplayName() }}</strong>
+        <small>{{ adminRole() }}</small>
       </span>
     </div>
+    <button
+      class="tt-top-nav__icon-button"
+      type="button"
+      [attr.aria-label]="copy().logout"
+      (click)="logout()"
+    >
+      <tt-icon name="logout" />
+    </button>
   </div>
 </header>
