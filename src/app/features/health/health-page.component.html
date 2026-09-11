@@ -1,0 +1,177 @@
+<section class="health-page">
+  <header class="health-heading">
+    <div>
+      <span class="health-heading__eyebrow">
+        <svg lucideActivity size="15"></svg>
+        {{ copy().eyebrow }}
+      </span>
+      <h1>{{ copy().title }}</h1>
+      <p>{{ copy().body }}</p>
+    </div>
+
+    <button class="health-button" type="button" [disabled]="loading()" (click)="loadHealth()">
+      <svg lucideRefreshCw size="16"></svg>
+      {{ copy().refresh }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <div class="health-alert" role="alert">
+      <span>
+        <svg lucideTriangleAlert size="16"></svg>
+        {{ error() }}
+      </span>
+      <button type="button" (click)="loadHealth()">{{ copy().retry }}</button>
+    </div>
+  }
+
+  <div class="health-summary">
+    @for (card of summaryCards(); track card.label) {
+      <article
+        class="health-card"
+        [class.health-card--attention]="card.status === 'attention'"
+        [class.health-card--down]="card.status === 'down'"
+      >
+        <span class="health-card__icon">
+          @switch (card.icon) {
+            @case ('overall') {
+              <svg lucideGauge size="18"></svg>
+            }
+            @case ('latency') {
+              <svg lucideTimer size="18"></svg>
+            }
+            @case ('queue') {
+              <svg lucideClock size="18"></svg>
+            }
+            @default {
+              <svg lucideShieldCheck size="18"></svg>
+            }
+          }
+        </span>
+        <span>{{ card.label }}</span>
+        <strong>{{ card.value }}</strong>
+        <small>{{ card.detail }}</small>
+      </article>
+    }
+  </div>
+
+  <div class="health-grid">
+    <section class="health-panel health-panel--services">
+      <div class="health-panel__heading">
+        <h2>{{ copy().panels.services }}</h2>
+        @if (loading()) {
+          <span class="health-loading">
+            <i></i>
+            {{ copy().loading }}
+          </span>
+        } @else {
+          <time>{{ copy().lastChecked }}: {{ formatCheckedAt() }}</time>
+        }
+      </div>
+
+      <div class="health-services">
+        @for (service of services(); track service.name) {
+          <article
+            class="health-service"
+            [class.health-service--attention]="service.status === 'attention'"
+            [class.health-service--down]="service.status === 'down'"
+          >
+            <span class="health-service__icon">
+              @switch (service.icon) {
+                @case ('api') {
+                  <svg lucideServer size="18"></svg>
+                }
+                @case ('database') {
+                  <svg lucideDatabase size="18"></svg>
+                }
+                @case ('auth') {
+                  <svg lucideWifi size="18"></svg>
+                }
+                @case ('planning') {
+                  <svg lucideWorkflow size="18"></svg>
+                }
+                @case ('mail') {
+                  <svg lucideMailCheck size="18"></svg>
+                }
+                @default {
+                  <svg lucideHistory size="18"></svg>
+                }
+              }
+            </span>
+
+            <div>
+              <div class="health-service__title">
+                <strong>{{ service.name }}</strong>
+                <mark
+                  [class.health-status--attention]="service.status === 'attention'"
+                  [class.health-status--down]="service.status === 'down'"
+                >
+                  @switch (service.status) {
+                    @case ('healthy') {
+                      <svg lucideCircleCheck size="13"></svg>
+                    }
+                    @case ('attention') {
+                      <svg lucideCircleAlert size="13"></svg>
+                    }
+                    @default {
+                      <svg lucideCircleOff size="13"></svg>
+                    }
+                  }
+                  {{ statusLabel(service.status) }}
+                </mark>
+              </div>
+              <p>{{ service.detail }}</p>
+              <small>{{ service.metric }}</small>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+
+    <aside class="health-side">
+      <section class="health-panel">
+        <div class="health-panel__heading">
+          <h2>{{ copy().panels.checks }}</h2>
+        </div>
+
+        <div class="health-checks">
+          @for (check of checks(); track check.label) {
+            <div
+              class="health-check"
+              [class.health-check--attention]="check.status === 'attention'"
+              [class.health-check--down]="check.status === 'down'"
+            >
+              @switch (check.status) {
+                @case ('healthy') {
+                  <svg lucideCircleCheck size="16"></svg>
+                }
+                @case ('attention') {
+                  <svg lucideCircleAlert size="16"></svg>
+                }
+                @default {
+                  <svg lucideCircleOff size="16"></svg>
+                }
+              }
+              <span>{{ check.label }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="health-panel">
+        <div class="health-panel__heading">
+          <h2>{{ copy().panels.snapshot }}</h2>
+        </div>
+
+        <dl class="health-snapshot">
+          @for (item of snapshot(); track item.label) {
+            <div>
+              <dt>{{ item.label }}</dt>
+              <dd>{{ item.value }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+    </aside>
+  </div>
+</section>
