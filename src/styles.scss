@@ -33,3 +33,36 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.page-state {
+  background: var(--tt-card);
+  border: 1px solid var(--tt-line);
+  border-radius: 8px;
+  box-shadow: var(--tt-card-shadow);
+  display: grid;
+  gap: 10px;
+  max-width: 720px;
+  padding: 22px;
+}
+
+.page-state__eyebrow {
+  color: var(--tt-forest);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.page-state h1 {
+  color: var(--tt-ink);
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.1;
+  margin: 0;
+}
+
+.page-state p {
+  color: var(--tt-ink-soft);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  margin: 0;
+}

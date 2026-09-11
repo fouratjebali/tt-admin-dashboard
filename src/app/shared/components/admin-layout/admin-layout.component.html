@@ -1,0 +1,167 @@
+<section class="admin-layout" [class.admin-layout--menu-open]="menuOpen()">
+  <aside class="admin-sidebar" [attr.aria-label]="copy().primaryNav">
+    <div class="admin-sidebar__brand">
+      <span class="admin-sidebar__mark">TT</span>
+      <span>
+        <strong>TT Admin</strong>
+        <small>{{ copy().workspace }}</small>
+      </span>
+    </div>
+
+    <nav class="admin-sidebar__nav">
+      @for (item of navItems; track item.route) {
+        <a
+          class="admin-sidebar__link"
+          [routerLink]="item.route"
+          routerLinkActive="admin-sidebar__link--active"
+          [routerLinkActiveOptions]="{ exact: item.exact }"
+          ariaCurrentWhenActive="page"
+          (click)="closeMenu()"
+        >
+          @switch (item.icon) {
+            @case ('dashboard') {
+              <svg lucideLayoutDashboard size="18"></svg>
+            }
+            @case ('users') {
+              <svg lucideUsers size="18"></svg>
+            }
+            @case ('health') {
+              <svg lucideActivity size="18"></svg>
+            }
+            @case ('settings') {
+              <svg lucideSettings size="18"></svg>
+            }
+            @case ('audit') {
+              <svg lucideFileClock size="18"></svg>
+            }
+            @case ('admins') {
+              <svg lucideUserCog size="18"></svg>
+            }
+          }
+          <span>{{ copy().nav[item.labelKey] }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="admin-sidebar__summary">
+      <span class="admin-sidebar__summary-icon">
+        <svg lucideMailCheck size="18"></svg>
+      </span>
+      <div>
+        <span>{{ copy().queueLabel }}</span>
+        <strong>{{ copy().queueValue }}</strong>
+        <small>{{ copy().queueHint }}</small>
+      </div>
+    </div>
+  </aside>
+
+  @if (menuOpen()) {
+    <button
+      class="admin-layout__scrim"
+      type="button"
+      [attr.aria-label]="copy().closeMenu"
+      (click)="closeMenu()"
+    ></button>
+  }
+
+  <div class="admin-workspace">
+    <header class="admin-topbar">
+      <div class="admin-topbar__left">
+        <button
+          class="admin-topbar__menu"
+          type="button"
+          [attr.aria-label]="menuOpen() ? copy().closeMenu : copy().openMenu"
+          [attr.title]="menuOpen() ? copy().closeMenu : copy().openMenu"
+          (click)="toggleMenu()"
+        >
+          @if (menuOpen()) {
+            <svg lucideX size="18"></svg>
+          } @else {
+            <svg lucideMenu size="18"></svg>
+          }
+        </button>
+
+        <label class="admin-search">
+          <svg lucideSearch size="16"></svg>
+          <input [attr.placeholder]="copy().search" type="search" />
+        </label>
+      </div>
+
+      <div class="admin-topbar__tools" [attr.aria-label]="copy().controls">
+        <span class="admin-topbar__status">
+          <svg lucideShieldCheck size="14"></svg>
+          {{ copy().status }}
+        </span>
+
+        <button
+          class="admin-topbar__icon-button"
+          type="button"
+          [attr.aria-label]="preferences.isDarkMode() ? copy().lightMode : copy().darkMode"
+          [attr.title]="preferences.isDarkMode() ? copy().lightMode : copy().darkMode"
+          (click)="preferences.toggleTheme()"
+        >
+          @if (preferences.isDarkMode()) {
+            <svg lucideSun size="17"></svg>
+          } @else {
+            <svg lucideMoon size="17"></svg>
+          }
+        </button>
+
+        <div class="admin-language" role="group" [attr.aria-label]="copy().languageSelector">
+          <svg lucideLanguages size="14"></svg>
+          <button
+            type="button"
+            [class.admin-language__option--active]="preferences.language() === 'en'"
+            (click)="setLanguage('en')"
+          >
+            EN
+          </button>
+          <button
+            type="button"
+            [class.admin-language__option--active]="preferences.language() === 'fr'"
+            (click)="setLanguage('fr')"
+          >
+            FR
+          </button>
+        </div>
+
+        <button
+          class="admin-topbar__icon-button"
+          type="button"
+          [attr.aria-label]="copy().notifications"
+          [attr.title]="copy().notifications"
+        >
+          <svg lucideBell size="17"></svg>
+        </button>
+
+        <button
+          class="admin-profile"
+          type="button"
+          [attr.aria-label]="copy().profileMenu"
+          [attr.title]="copy().profileMenu"
+        >
+          <span class="admin-profile__avatar">{{ adminInitials() }}</span>
+          <span class="admin-profile__text">
+            <strong>{{ adminDisplayName() }}</strong>
+            <small>{{ adminRole() }}</small>
+          </span>
+          <svg lucideChevronDown size="15"></svg>
+        </button>
+
+        <button
+          class="admin-topbar__icon-button"
+          type="button"
+          [attr.aria-label]="copy().logout"
+          [attr.title]="copy().logout"
+          (click)="logout()"
+        >
+          <svg lucideLogOut size="17"></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="admin-content">
+      <ng-content />
+    </main>
+  </div>
+</section>

@@ -1,35 +1,35 @@
 // Base
-$cream: #f3eee1;
+$cream: #f6f7f9;
 $card: #ffffff;
-$forest: #1f3b33;
-$forest-2: #2c5348;
+$forest: #1f6f5b;
+$forest-2: #2f8d75;
 
 // Text
-$ink: #17201b;
-$ink-soft: #5b6259;
-$ink-faint: #8b9088;
+$ink: #17212b;
+$ink-soft: #5f6c7b;
+$ink-faint: #8c98a7;
 
 // Structure
-$line: #e5dfcc;
+$line: #e2e7ee;
 
 // Semantic - danger / suspended / down
 $terracotta: #b04a31;
-$terracotta-light: #f2dcd2;
+$terracotta-light: #fde8e1;
 
 // Semantic - warning / pending / degraded
-$amber: #bd8535;
-$amber-light: #f3e4c7;
+$amber: #b7791f;
+$amber-light: #f8ebcb;
 
 // Semantic - success / active / up
-$sage: #4c7359;
-$sage-light: #e1ead8;
+$sage: #3f7d56;
+$sage-light: #e2f2e8;
 
 // Semantic - info / secondary role
-$teal: #33625f;
-$teal-light: #dce8e5;
+$teal: #2f6f88;
+$teal-light: #dceef5;
 
 $font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-$card-shadow: 0 3px 14px rgba(31, 59, 51, 0.08);
+$card-shadow: 0 8px 24px rgba(23, 33, 43, 0.08);
 
 :root {
   --tt-cream: #{$cream};
@@ -53,21 +53,21 @@ $card-shadow: 0 3px 14px rgba(31, 59, 51, 0.08);
 }
 
 :root[data-theme='dark'] {
-  --tt-cream: #101713;
-  --tt-card: #17221d;
-  --tt-forest: #dce8e5;
-  --tt-forest-2: #9fc0b5;
-  --tt-ink: #f3eee1;
-  --tt-ink-soft: #c5d0c4;
-  --tt-ink-faint: #8fa096;
-  --tt-line: #2d3a33;
-  --tt-terracotta: #f0a08b;
-  --tt-terracotta-light: #43261f;
-  --tt-amber: #e0b36f;
-  --tt-amber-light: #3f321e;
-  --tt-sage: #a8c79e;
-  --tt-sage-light: #263729;
-  --tt-teal: #9bc8c3;
-  --tt-teal-light: #1f3937;
+  --tt-cream: #101419;
+  --tt-card: #171d23;
+  --tt-forest: #7cc7ad;
+  --tt-forest-2: #5eb399;
+  --tt-ink: #f4f7fb;
+  --tt-ink-soft: #b9c4d0;
+  --tt-ink-faint: #7f8b99;
+  --tt-line: #29323d;
+  --tt-terracotta: #f2a38d;
+  --tt-terracotta-light: #3b241f;
+  --tt-amber: #e7bd6c;
+  --tt-amber-light: #3b311d;
+  --tt-sage: #9bd28f;
+  --tt-sage-light: #223425;
+  --tt-teal: #93d1e8;
+  --tt-teal-light: #1d333d;
   --tt-card-shadow: 0 3px 14px rgba(0, 0, 0, 0.26);
 }

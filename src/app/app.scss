@@ -4,15 +4,10 @@
 }
 
 .app-shell {
-  min-height: 100vh;
   padding: 18px;
 }
 
-.app-shell:not(.app-shell--authenticated) {
+.app-shell--login {
   height: 100vh;
   overflow: hidden;
-}
-
-.app-shell--authenticated {
-  padding-top: 74px;
 }

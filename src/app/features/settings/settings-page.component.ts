@@ -1,17 +1,26 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
+
+import { PreferencesService } from '../../core/services/preferences.service';
+
+const COPY = {
+  en: {
+    eyebrow: 'Controls',
+    title: 'Global settings',
+    body: 'Configure organization-wide mail assistant rules, automation limits, and review policy.',
+  },
+  fr: {
+    eyebrow: 'Controles',
+    title: 'Parametres globaux',
+    body: 'Configurez les regles globales, les limites automation et la politique de revue.',
+  },
+};
 
 @Component({
   selector: 'app-settings-page',
-  template: '<h1>Global Settings — page owned by Senda, Sprint 2</h1>',
-  styles: [
-    `
-      h1 {
-        margin: 0;
-        color: var(--tt-forest);
-        font-size: 20px;
-        font-weight: 800;
-      }
-    `,
-  ],
+  template:
+    '<section class="page-state"><span class="page-state__eyebrow">{{ copy().eyebrow }}</span><h1>{{ copy().title }}</h1><p>{{ copy().body }}</p></section>',
 })
-export class SettingsPageComponent {}
+export class SettingsPageComponent {
+  private readonly preferences = inject(PreferencesService);
+  protected readonly copy = computed(() => COPY[this.preferences.language()]);
+}

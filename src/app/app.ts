@@ -1,11 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 
-import { TtTopNavComponent } from './shared/components/top-nav/top-nav.component';
+import { AdminLayoutComponent } from './shared/components/admin-layout/admin-layout.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TtTopNavComponent],
+  imports: [RouterOutlet, AdminLayoutComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
