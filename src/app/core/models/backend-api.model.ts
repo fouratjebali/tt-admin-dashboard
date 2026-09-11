@@ -1,10 +1,8 @@
 export type AdminRole = 'admin' | 'reviewer' | 'viewer' | 'user';
 
-export interface MicrosoftAuthRequest {
-  access_token: string;
-  id_token?: string;
-  refresh_token?: string;
-  expires_at?: string;
+export interface AdminLoginRequest {
+  username: string;
+  password: string;
 }
 
 export interface AdminIdentity {
@@ -18,7 +16,7 @@ export interface AdminIdentity {
 
 export interface BackendSession {
   session_token: string;
-  user: AdminIdentity;
+  user?: AdminIdentity;
   expires_at?: string;
 }
 

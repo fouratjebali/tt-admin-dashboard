@@ -64,12 +64,12 @@ npm install --strict-ssl=false
 This uses a command-level workaround only. Do not commit npm registry or SSL
 configuration changes.
 
-## 4. Configure backend and Microsoft auth
+## 4. Configure backend and admin login
 
 The Angular app talks only to the backend API. It must not connect directly to
 PostgreSQL; the backend owns database access through its `DATABASE_URL`.
 
-The app reads integration settings from:
+The app reads the API base URL from:
 
 - `src/environments/environment.development.ts` for local development.
 - `src/environments/environment.ts` for production builds.
@@ -80,18 +80,39 @@ Angular API base URL should be:
 ```ts
 export const environment = {
   apiBaseUrl: 'http://localhost:8000/api/v1',
-  microsoftAuth: {
-    clientId: '<azure-app-client-id>',
-    tenantId: 'common',
-    redirectUri: 'http://localhost:4200/login',
-    scopes: ['openid', 'profile', 'email', 'User.Read'],
-  },
 };
 ```
 
-Replace `<azure-app-client-id>` with the Azure application client ID configured
-for Microsoft/Outlook OAuth. The backend validates access and roles from its
-`users` table.
+Configure the backend admin credentials before starting the API:
+
+```ini
+ADMIN_DASHBOARD_USERNAME=admin
+ADMIN_DASHBOARD_PASSWORD=change-this-password
+ADMIN_DASHBOARD_EMAIL=dashboard.admin@tunisietelecom.tn
+ADMIN_DASHBOARD_DISPLAY_NAME=Dashboard Admin
+```
+
+After backend startup, the admin credential is created or updated in the DB
+automatically. The login page sends:
+
+```http
+POST /api/v1/auth/admin/login
+```
+
+with:
+
+```json
+{
+  "username": "admin",
+  "password": "your-password"
+}
+```
+
+The returned `session_token` is stored by the frontend and sent as:
+
+```txt
+Authorization: Bearer <session_token>
+```
 
 Admin API requests are sent below:
 
@@ -101,7 +122,7 @@ ${apiBaseUrl}/admin/*
 
 Examples:
 
-- `POST /api/v1/auth/microsoft`
+- `POST /api/v1/auth/admin/login`
 - `POST /api/v1/auth/refresh`
 - `GET /api/v1/auth/me`
 - `GET /api/v1/admin/me`
@@ -188,8 +209,8 @@ src/app/
   shared/
     components/     reusable design-system components
   features/
-    login/          Microsoft admin sign-in route
-    dashboard/      route placeholder
+    login/          backend credential admin sign-in route
+    dashboard/      operations overview interface
     users/          route placeholder
     health/         route placeholder
     settings/       route placeholder

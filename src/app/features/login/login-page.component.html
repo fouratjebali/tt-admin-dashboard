@@ -92,7 +92,7 @@
   </div>
 
   <div class="login-page__panel login-page__panel--form">
-    <section class="login-card">
+    <form class="login-card" [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
       <div class="login-card__header">
         <span class="login-card__icon">
           <tt-icon name="key" />
@@ -110,42 +110,67 @@
         </div>
       }
 
-      <button
-        class="microsoft-button"
-        type="button"
-        [disabled]="isSubmitting()"
-        (click)="signInWithMicrosoft()"
-      >
-        @if (isSubmitting()) {
-          <span class="login-submit__spinner" aria-hidden="true"></span>
-          <span>{{ copy().signingIn }}</span>
-        } @else {
-          <span class="microsoft-mark" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-          <span>{{ copy().submit }}</span>
-          <tt-icon name="arrow-right" />
+      <label class="login-field">
+        <span>{{ copy().username }}</span>
+        <span class="login-field__control">
+          <tt-icon name="user-check" />
+          <input
+            autocomplete="username"
+            formControlName="username"
+            [placeholder]="copy().usernamePlaceholder"
+            type="text"
+          />
+        </span>
+        @if (hasError('username')) {
+          <small>{{ copy().usernameError }}</small>
         }
-      </button>
+      </label>
+
+      <label class="login-field">
+        <span>{{ copy().password }}</span>
+        <span class="login-field__control">
+          <tt-icon name="lock" />
+          <input
+            autocomplete="current-password"
+            formControlName="password"
+            [placeholder]="copy().passwordPlaceholder"
+            [type]="passwordVisible() ? 'text' : 'password'"
+          />
+          <button
+            class="login-field__toggle"
+            type="button"
+            [attr.aria-label]="passwordVisible() ? copy().hidePassword : copy().showPassword"
+            (click)="togglePasswordVisibility()"
+          >
+            <tt-icon [name]="passwordVisible() ? 'eye-off' : 'eye'" />
+          </button>
+        </span>
+        @if (hasError('password')) {
+          <small>{{ copy().passwordError }}</small>
+        }
+      </label>
 
       <div class="login-options">
         <label class="login-check">
-          <input
-            [checked]="rememberDevice()"
-            type="checkbox"
-            (change)="setRememberDevice($event)"
-          />
+          <input formControlName="rememberDevice" type="checkbox" />
           <span>{{ copy().rememberDevice }}</span>
         </label>
         <a href="mailto:platform-owner@tt.tn">{{ copy().needAccess }}</a>
       </div>
 
+      <button class="login-submit" type="submit" [disabled]="loginForm.invalid || isSubmitting()">
+        @if (isSubmitting()) {
+          <span class="login-submit__spinner" aria-hidden="true"></span>
+          <span>{{ copy().signingIn }}</span>
+        } @else {
+          <span>{{ copy().submit }}</span>
+          <tt-icon name="arrow-right" />
+        }
+      </button>
+
       <p class="login-card__footnote">
         {{ copy().footnote }}
       </p>
-    </section>
+    </form>
   </div>
 </section>

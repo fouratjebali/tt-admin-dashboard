@@ -16,7 +16,7 @@ import {
   BulkDraftActionRequest,
   BulkSendRequest,
   DraftEmail,
-  MicrosoftAuthRequest,
+  AdminLoginRequest,
   PaginatedResponse,
   PlanningContact,
   PlanningImport,
@@ -33,8 +33,8 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiBaseUrl.replace(/\/$/, '');
 
-  authenticateWithMicrosoft(payload: MicrosoftAuthRequest): Observable<BackendSession> {
-    return this.http.post<BackendSession>(this.apiUrl('/auth/microsoft'), payload);
+  loginAdmin(payload: AdminLoginRequest): Observable<BackendSession> {
+    return this.http.post<BackendSession>(this.apiUrl('/auth/admin/login'), payload);
   }
 
   refreshSession(): Observable<BackendSession> {

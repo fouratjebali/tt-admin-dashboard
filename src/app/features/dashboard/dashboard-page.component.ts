@@ -88,7 +88,7 @@ const DASHBOARD_COPY = {
     statusTitle: 'System status',
     status: [
       { label: 'Backend API', value: 'Healthy' },
-      { label: 'Outlook connector', value: 'Operational' },
+      { label: 'Mail connector', value: 'Operational' },
       { label: 'Database sync', value: 'Recent' },
     ],
   },
@@ -156,7 +156,7 @@ const DASHBOARD_COPY = {
     statusTitle: 'Etat systeme',
     status: [
       { label: 'Backend API', value: 'Healthy' },
-      { label: 'Connecteur Outlook', value: 'Operationnel' },
+      { label: 'Connecteur mail', value: 'Operationnel' },
       { label: 'Sync database', value: 'Recente' },
     ],
   },
