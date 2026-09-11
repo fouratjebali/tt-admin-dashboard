@@ -37,6 +37,10 @@ export class PreferencesService {
     this.languageSignal.set(language);
   }
 
+  setTheme(theme: Theme): void {
+    this.themeSignal.set(theme);
+  }
+
   toggleTheme(): void {
     this.themeSignal.update((theme) => (theme === 'dark' ? 'light' : 'dark'));
   }

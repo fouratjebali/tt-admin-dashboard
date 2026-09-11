@@ -1,0 +1,255 @@
+<section class="settings-page">
+  <header class="settings-heading">
+    <div>
+      <span class="settings-heading__eyebrow">
+        <svg lucideSettings size="15"></svg>
+        {{ copy().eyebrow }}
+      </span>
+      <h1>{{ copy().title }}</h1>
+      <p>{{ copy().body }}</p>
+    </div>
+
+    @if (savedMessage()) {
+      <span class="settings-saved">
+        <svg lucideCheck size="14"></svg>
+        {{ savedMessage() }}
+      </span>
+    }
+  </header>
+
+  <div class="settings-grid">
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
+        <span class="settings-panel__icon">
+          <svg lucidePalette size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.appearance }}</h2>
+          <p>{{ copy().hints.language }}</p>
+        </div>
+      </div>
+
+      <div class="settings-field">
+        <span>
+          <svg lucideLanguages size="15"></svg>
+          {{ copy().fields.language }}
+        </span>
+        <div class="settings-segment" role="group" [attr.aria-label]="copy().fields.language">
+          <button
+            type="button"
+            [class.settings-segment__button--active]="language() === 'en'"
+            (click)="setLanguage('en')"
+          >
+            {{ copy().fields.english }}
+          </button>
+          <button
+            type="button"
+            [class.settings-segment__button--active]="language() === 'fr'"
+            (click)="setLanguage('fr')"
+          >
+            {{ copy().fields.french }}
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-field">
+        <span>
+          <svg lucideMonitor size="15"></svg>
+          {{ copy().fields.theme }}
+        </span>
+        <div class="settings-segment" role="group" [attr.aria-label]="copy().fields.theme">
+          <button
+            type="button"
+            [class.settings-segment__button--active]="theme() === 'light'"
+            (click)="setTheme('light')"
+          >
+            <svg lucideSun size="14"></svg>
+            {{ copy().fields.light }}
+          </button>
+          <button
+            type="button"
+            [class.settings-segment__button--active]="theme() === 'dark'"
+            (click)="setTheme('dark')"
+          >
+            <svg lucideMoon size="14"></svg>
+            {{ copy().fields.dark }}
+          </button>
+        </div>
+      </div>
+
+      <p class="settings-note">{{ copy().hints.theme }}</p>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
+        <span class="settings-panel__icon settings-panel__icon--accent">
+          <svg lucideClock size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.automation }}</h2>
+          <p>{{ copy().hints.automation }}</p>
+        </div>
+      </div>
+
+      @if (automationError()) {
+        <div class="settings-alert" role="alert">
+          <span>
+            <svg lucideCircleAlert size="15"></svg>
+            {{ automationError() }}
+          </span>
+          <button type="button" (click)="loadAutomationSettings()">{{ copy().retry }}</button>
+        </div>
+      }
+
+      <label class="settings-switch">
+        <span>
+          <svg lucideBell size="15"></svg>
+          {{ copy().fields.automationEnabled }}
+        </span>
+        <input
+          type="checkbox"
+          [checked]="automation().enabled"
+          (change)="updateAutomationEnabled($event)"
+        />
+        <i></i>
+      </label>
+
+      <div class="settings-inline">
+        <label>
+          <span>{{ copy().fields.schedule }}</span>
+          <input
+            type="time"
+            [value]="automation().schedule"
+            (input)="updateAutomationSchedule($event)"
+          />
+        </label>
+
+        <label>
+          <span>{{ copy().fields.timezone }}</span>
+          <select [value]="automation().timezone" (change)="updateAutomationTimezone($event)">
+            @for (timezone of timezoneOptions; track timezone) {
+              <option [value]="timezone">{{ timezone }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="settings-actions">
+        <button
+          class="settings-button settings-button--ghost"
+          type="button"
+          [disabled]="loadingAutomation()"
+          (click)="loadAutomationSettings()"
+        >
+          <svg lucideRefreshCw size="15"></svg>
+          {{ copy().refresh }}
+        </button>
+        <button
+          class="settings-button"
+          type="button"
+          [disabled]="savingAutomation()"
+          (click)="saveAutomationSettings()"
+        >
+          <svg lucideSave size="15"></svg>
+          {{ copy().save }}
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
+        <span class="settings-panel__icon settings-panel__icon--warning">
+          <svg lucideSlidersHorizontal size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.policy }}</h2>
+          <p>{{ copy().hints.policy }}</p>
+        </div>
+      </div>
+
+      <div class="settings-inline">
+        <label>
+          <span>{{ copy().fields.reviewThreshold }}</span>
+          <input
+            min="1"
+            max="200"
+            type="number"
+            [value]="policy().reviewThreshold"
+            (input)="updateReviewThreshold($event)"
+          />
+        </label>
+
+        <label>
+          <span>{{ copy().fields.retentionDays }}</span>
+          <input
+            min="7"
+            max="3650"
+            type="number"
+            [value]="policy().retentionDays"
+            (input)="updateRetentionDays($event)"
+          />
+        </label>
+      </div>
+
+      <label class="settings-stack">
+        <span>{{ copy().fields.supportEmail }}</span>
+        <input type="email" [value]="policy().supportEmail" (input)="updateSupportEmail($event)" />
+      </label>
+
+      <div class="settings-actions">
+        <button
+          class="settings-button settings-button--ghost"
+          type="button"
+          (click)="resetPolicySettings()"
+        >
+          <svg lucideRotateCcw size="15"></svg>
+          {{ copy().refresh }}
+        </button>
+        <button class="settings-button" type="button" (click)="savePolicySettings()">
+          <svg lucideSave size="15"></svg>
+          {{ copy().save }}
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
+        <span class="settings-panel__icon settings-panel__icon--secure">
+          <svg lucideShieldCheck size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.account }}</h2>
+          <p>{{ copy().hints.session }}</p>
+        </div>
+      </div>
+
+      <div class="settings-profile">
+        @for (row of accountRows(); track row.label) {
+          <div>
+            @switch (row.icon) {
+              @case ('user') {
+                <svg lucideUser size="16"></svg>
+              }
+              @case ('mail') {
+                <svg lucideMail size="16"></svg>
+              }
+              @case ('shield') {
+                <svg lucideShieldCheck size="16"></svg>
+              }
+              @default {
+                <svg lucideKeyRound size="16"></svg>
+              }
+            }
+            <span>{{ row.label }}</span>
+            <strong>{{ row.value }}</strong>
+          </div>
+        }
+      </div>
+
+      <span class="settings-status" [class.settings-status--muted]="!isAuthenticated()">
+        <svg lucideCheck size="14"></svg>
+        {{ isAuthenticated() ? copy().values.active : copy().values.missing }}
+      </span>
+    </section>
+  </div>
+</section>
