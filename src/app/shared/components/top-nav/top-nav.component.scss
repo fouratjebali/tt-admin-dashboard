@@ -2,8 +2,8 @@
 
 .tt-top-nav {
   align-items: center;
-  background: $card;
-  border-bottom: 1px solid $line;
+  background: var(--tt-card);
+  border-bottom: 1px solid var(--tt-line);
   display: grid;
   gap: 14px;
   grid-template-columns: max-content 1fr max-content;
@@ -30,9 +30,9 @@
 
 .tt-top-nav__mark {
   align-items: center;
-  background: $forest;
+  background: var(--tt-forest);
   border-radius: 7px;
-  color: $cream;
+  color: var(--tt-cream);
   display: inline-flex;
   font-size: 10px;
   font-weight: 800;
@@ -42,7 +42,7 @@
 }
 
 .tt-top-nav__wordmark {
-  color: $ink;
+  color: var(--tt-ink);
   font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
@@ -57,7 +57,7 @@
 .tt-top-nav__link {
   align-items: center;
   border-radius: 20px;
-  color: $ink-faint;
+  color: var(--tt-ink-faint);
   display: inline-flex;
   font-size: 10px;
   font-weight: 800;
@@ -72,8 +72,8 @@
 }
 
 .tt-top-nav__link--active {
-  background: $sage-light;
-  color: $forest;
+  background: var(--tt-sage-light);
+  color: var(--tt-forest);
 }
 
 .tt-top-nav__tools {
@@ -83,10 +83,10 @@
 
 .tt-top-nav__icon-button {
   align-items: center;
-  background: $card;
-  border: 1px solid $line;
+  background: var(--tt-card);
+  border: 1px solid var(--tt-line);
   border-radius: 50%;
-  color: $ink-soft;
+  color: var(--tt-ink-soft);
   cursor: pointer;
   display: inline-flex;
   font-size: 14px;
@@ -96,6 +96,33 @@
   width: 28px;
 }
 
+.tt-top-nav__language {
+  align-items: center;
+  background: var(--tt-cream);
+  border: 1px solid var(--tt-line);
+  border-radius: 20px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+}
+
+.tt-top-nav__language button {
+  background: transparent;
+  border: 0;
+  border-radius: 16px;
+  color: var(--tt-ink-faint);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 800;
+  height: 22px;
+  padding: 0 7px;
+}
+
+.tt-top-nav__language-option--active {
+  background: var(--tt-forest) !important;
+  color: var(--tt-cream) !important;
+}
+
 .tt-top-nav__profile {
   gap: 7px;
   min-width: 0;
@@ -103,9 +130,9 @@
 
 .tt-top-nav__avatar {
   align-items: center;
-  background: $forest;
+  background: var(--tt-forest);
   border-radius: 50%;
-  color: $cream;
+  color: var(--tt-cream);
   display: inline-flex;
   font-size: 9px;
   font-weight: 800;
@@ -120,7 +147,7 @@
 }
 
 .tt-top-nav__identity strong {
-  color: $ink;
+  color: var(--tt-ink);
   font-size: 10px;
   font-weight: 800;
   line-height: 1;
@@ -128,7 +155,7 @@
 }
 
 .tt-top-nav__identity small {
-  color: $ink-faint;
+  color: var(--tt-ink-faint);
   font-size: 8px;
   font-weight: 700;
   line-height: 1;

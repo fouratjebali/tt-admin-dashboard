@@ -4,7 +4,7 @@
     <span class="tt-top-nav__wordmark">TT Admin</span>
   </a>
 
-  <nav class="tt-top-nav__links" aria-label="Primary">
+  <nav class="tt-top-nav__links" [attr.aria-label]="copy().primaryNav">
     @for (item of navItems; track item.route) {
       <a
         class="tt-top-nav__link"
@@ -14,23 +14,44 @@
         ariaCurrentWhenActive="page"
       >
         <tt-icon [name]="item.icon" />
-        <span>{{ item.label }}</span>
+        <span>{{ copy()[item.labelKey] }}</span>
       </a>
     }
   </nav>
 
   <div class="tt-top-nav__tools">
-    <button class="tt-top-nav__icon-button" type="button" aria-label="Dark mode">
-      <tt-icon name="moon" />
+    <button
+      class="tt-top-nav__icon-button"
+      type="button"
+      [attr.aria-label]="preferences.isDarkMode() ? copy().lightMode : copy().darkMode"
+      (click)="preferences.toggleTheme()"
+    >
+      <tt-icon [name]="preferences.isDarkMode() ? 'sun' : 'moon'" />
     </button>
-    <button class="tt-top-nav__icon-button" type="button" aria-label="Notifications">
+    <div class="tt-top-nav__language" role="group" [attr.aria-label]="copy().languageSelector">
+      <button
+        type="button"
+        [class.tt-top-nav__language-option--active]="preferences.language() === 'en'"
+        (click)="setLanguage('en')"
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        [class.tt-top-nav__language-option--active]="preferences.language() === 'fr'"
+        (click)="setLanguage('fr')"
+      >
+        FR
+      </button>
+    </div>
+    <button class="tt-top-nav__icon-button" type="button" [attr.aria-label]="copy().notifications">
       <tt-icon name="bell" />
     </button>
     <div class="tt-top-nav__profile">
       <span class="tt-top-nav__avatar">IT</span>
       <span class="tt-top-nav__identity">
         <strong>Admin User</strong>
-        <small>Operations</small>
+        <small>{{ copy().role }}</small>
       </span>
     </div>
   </div>

@@ -8,6 +8,11 @@
   padding: 18px;
 }
 
+.app-shell:not(.app-shell--authenticated) {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .app-shell--authenticated {
   padding-top: 74px;
 }

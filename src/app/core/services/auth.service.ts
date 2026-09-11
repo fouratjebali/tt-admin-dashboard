@@ -14,17 +14,22 @@ export class AuthService {
     return this.tokenSignal();
   }
 
-  login(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
+  login(token: string, rememberDevice = true): void {
+    const storage = rememberDevice ? localStorage : sessionStorage;
+    const storageToClear = rememberDevice ? sessionStorage : localStorage;
+
+    storageToClear.removeItem(TOKEN_KEY);
+    storage.setItem(TOKEN_KEY, token);
     this.tokenSignal.set(token);
   }
 
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
     this.tokenSignal.set(null);
   }
 
   private readStoredToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
+    return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
   }
 }

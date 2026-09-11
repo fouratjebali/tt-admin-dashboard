@@ -1,4 +1,5 @@
 @use './styles/tokens' as *;
+@use './styles/login';
 
 * {
   box-sizing: border-box;
@@ -11,11 +12,14 @@ body {
 }
 
 body {
-  background: $cream;
-  color: $ink;
+  background: var(--tt-cream);
+  color: var(--tt-ink);
   font-family: $font-family;
   font-size: 12px;
   letter-spacing: 0;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 }
 
 button,

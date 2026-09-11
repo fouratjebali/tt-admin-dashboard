@@ -1,0 +1,177 @@
+<section class="login-page">
+  <div class="login-page__panel login-page__panel--brand">
+    <div class="login-preferences" role="group" [attr.aria-label]="copy().displayPreferences">
+      <button
+        class="login-preferences__theme"
+        type="button"
+        [attr.aria-label]="preferences.isDarkMode() ? copy().lightMode : copy().darkMode"
+        (click)="preferences.toggleTheme()"
+      >
+        <tt-icon [name]="preferences.isDarkMode() ? 'sun' : 'moon'" />
+      </button>
+      <div
+        class="login-preferences__language"
+        role="group"
+        [attr.aria-label]="copy().languageSelector"
+      >
+        <button
+          type="button"
+          [class.login-preferences__language-option--active]="preferences.language() === 'en'"
+          (click)="setLanguage('en')"
+        >
+          EN
+        </button>
+        <button
+          type="button"
+          [class.login-preferences__language-option--active]="preferences.language() === 'fr'"
+          (click)="setLanguage('fr')"
+        >
+          FR
+        </button>
+      </div>
+    </div>
+
+    <div class="login-brand">
+      <span class="login-brand__mark">TT</span>
+      <span>
+        <strong>TT Admin</strong>
+        <small>Mail Assistant Console</small>
+      </span>
+    </div>
+
+    <div class="login-hero">
+      <span class="login-hero__eyebrow">
+        <tt-icon name="shield-check" />
+        {{ copy().secureAccess }}
+      </span>
+      <h1>{{ copy().headline }}</h1>
+      <p>
+        {{ copy().summary }}
+      </p>
+    </div>
+
+    <div class="console-preview" aria-hidden="true">
+      <div class="console-preview__topline">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <div class="console-preview__grid">
+        <div class="console-preview__metric console-preview__metric--large">
+          <span class="console-preview__chip">
+            <tt-icon name="mail" />
+          </span>
+          <strong>2.4k</strong>
+          <small>{{ copy().emailsTriaged }}</small>
+        </div>
+
+        <div class="console-preview__metric">
+          <span class="console-preview__chip console-preview__chip--sage">
+            <tt-icon name="health" />
+          </span>
+          <strong>99.8%</strong>
+          <small>{{ copy().agentUptime }}</small>
+        </div>
+
+        <div class="console-preview__metric">
+          <span class="console-preview__chip console-preview__chip--amber">
+            <tt-icon name="audit" />
+          </span>
+          <strong>18</strong>
+          <small>{{ copy().reviewFlags }}</small>
+        </div>
+      </div>
+
+      <div class="console-preview__bars">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-page__panel login-page__panel--form">
+    <form class="login-card" [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+      <div class="login-card__header">
+        <span class="login-card__icon">
+          <tt-icon name="key" />
+        </span>
+        <div>
+          <h2>{{ copy().signIn }}</h2>
+          <p>{{ copy().instruction }}</p>
+        </div>
+      </div>
+
+      @if (authError()) {
+        <div class="login-alert" role="alert">
+          <tt-icon name="alert-circle" />
+          <span>{{ authError() }}</span>
+        </div>
+      }
+
+      <label class="login-field">
+        <span>{{ copy().email }}</span>
+        <span class="login-field__control">
+          <tt-icon name="user-check" />
+          <input
+            autocomplete="email"
+            formControlName="email"
+            inputmode="email"
+            [placeholder]="copy().emailPlaceholder"
+            type="email"
+          />
+        </span>
+        @if (hasError('email')) {
+          <small>{{ copy().emailError }}</small>
+        }
+      </label>
+
+      <label class="login-field">
+        <span>{{ copy().password }}</span>
+        <span class="login-field__control">
+          <tt-icon name="lock" />
+          <input
+            autocomplete="current-password"
+            formControlName="password"
+            [placeholder]="copy().passwordPlaceholder"
+            [type]="passwordVisible() ? 'text' : 'password'"
+          />
+          <button
+            class="login-field__toggle"
+            type="button"
+            [attr.aria-label]="passwordVisible() ? copy().hidePassword : copy().showPassword"
+            (click)="togglePasswordVisibility()"
+          >
+            <tt-icon [name]="passwordVisible() ? 'eye-off' : 'eye'" />
+          </button>
+        </span>
+        @if (hasError('password')) {
+          <small>{{ copy().passwordError }}</small>
+        }
+      </label>
+
+      <div class="login-options">
+        <label class="login-check">
+          <input formControlName="rememberDevice" type="checkbox" />
+          <span>{{ copy().rememberDevice }}</span>
+        </label>
+        <a href="mailto:platform-owner@tt.tn">{{ copy().needAccess }}</a>
+      </div>
+
+      <button class="login-submit" type="submit" [disabled]="loginForm.invalid || isSubmitting()">
+        @if (isSubmitting()) {
+          <span class="login-submit__spinner" aria-hidden="true"></span>
+          <span>{{ copy().signingIn }}</span>
+        } @else {
+          <span>{{ copy().submit }}</span>
+          <tt-icon name="arrow-right" />
+        }
+      </button>
+
+      <p class="login-card__footnote">
+        {{ copy().footnote }}
+      </p>
+    </form>
+  </div>
+</section>
