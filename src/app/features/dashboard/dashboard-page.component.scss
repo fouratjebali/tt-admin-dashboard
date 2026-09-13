@@ -44,8 +44,28 @@
   gap: 8px;
 }
 
-.dashboard-button,
-.dashboard-icon-button {
+.dashboard-date {
+  display: grid;
+  gap: 5px;
+}
+
+.dashboard-date span {
+  color: var(--tt-ink-faint);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.dashboard-date input {
+  background: var(--tt-card);
+  border: 1px solid var(--tt-line);
+  border-radius: 8px;
+  color: var(--tt-ink);
+  min-height: 34px;
+  outline: none;
+  padding: 0 10px;
+}
+
+.dashboard-button {
   align-items: center;
   border-radius: 8px;
   cursor: pointer;
@@ -70,16 +90,28 @@
   color: var(--tt-ink-soft);
 }
 
-.dashboard-button--compact {
-  min-height: 32px;
+.dashboard-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
-.dashboard-icon-button {
-  background: var(--tt-card);
-  border: 1px solid var(--tt-line);
-  color: var(--tt-ink-soft);
-  padding: 0;
-  width: 34px;
+.dashboard-alert {
+  align-items: center;
+  background: var(--tt-terracotta-light);
+  border: 1px solid color-mix(in srgb, var(--tt-terracotta) 24%, transparent);
+  border-radius: 8px;
+  color: var(--tt-terracotta);
+  display: flex;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.dashboard-alert--warning {
+  background: var(--tt-amber-light);
+  border-color: color-mix(in srgb, var(--tt-amber) 24%, transparent);
+  color: var(--tt-amber);
 }
 
 .metric-grid {
@@ -192,8 +224,25 @@
   margin: 4px 0 0;
 }
 
+.dashboard-loading {
+  align-items: center;
+  color: var(--tt-ink-faint);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  gap: 7px;
+}
+
+.dashboard-loading i {
+  animation: dashboard-spin 0.8s linear infinite;
+  border: 2px solid color-mix(in srgb, var(--tt-forest) 20%, transparent);
+  border-radius: 50%;
+  border-top-color: var(--tt-forest);
+  height: 16px;
+  width: 16px;
+}
+
 .pipeline-list,
-.review-list,
 .status-list {
   display: grid;
   gap: 12px;
@@ -240,53 +289,6 @@
   height: 100%;
 }
 
-.review-row {
-  align-items: center;
-  border: 1px solid var(--tt-line);
-  border-radius: 8px;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 28px minmax(0, 1fr) max-content max-content;
-  min-height: 58px;
-  padding: 10px;
-}
-
-.review-row__status {
-  align-items: center;
-  background: var(--tt-sage-light);
-  border-radius: 7px;
-  color: var(--tt-sage);
-  display: inline-flex;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-
-.review-row strong,
-.review-row small {
-  display: block;
-  line-height: 1.2;
-}
-
-.review-row strong {
-  color: var(--tt-ink);
-  font-size: 12px;
-  font-weight: 820;
-}
-
-.review-row small,
-.review-row time {
-  color: var(--tt-ink-faint);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.review-row > span:last-of-type {
-  color: var(--tt-ink-soft);
-  font-size: 10px;
-  font-weight: 800;
-}
-
 .activity-table {
   display: grid;
   min-width: 0;
@@ -302,6 +304,20 @@
     minmax(90px, 0.55fr) minmax(70px, 0.45fr);
   min-width: 760px;
   padding: 0 6px;
+}
+
+.activity-table__head--files,
+.activity-table__row--files {
+  grid-template-columns:
+    minmax(240px, 1.5fr) minmax(120px, 0.55fr) minmax(90px, 0.4fr)
+    minmax(140px, 0.55fr);
+  min-width: 700px;
+}
+
+.activity-table__head--users,
+.activity-table__row--users {
+  grid-template-columns: minmax(220px, 1.4fr) repeat(4, minmax(100px, 0.55fr));
+  min-width: 760px;
 }
 
 .activity-table__head {
@@ -344,6 +360,37 @@
   padding-top: 0;
 }
 
+.status-row--muted strong {
+  color: var(--tt-terracotta);
+}
+
+.dashboard-empty {
+  align-items: center;
+  border: 1px dashed var(--tt-line);
+  border-radius: 8px;
+  color: var(--tt-ink-faint);
+  display: flex;
+  font-size: 11px;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 116px;
+  padding: 16px;
+}
+
+.dashboard-empty--table {
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  min-height: 140px;
+  min-width: 700px;
+}
+
+@keyframes dashboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 1180px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -368,16 +415,11 @@
     flex-wrap: wrap;
   }
 
+  .dashboard-date {
+    flex: 1 1 145px;
+  }
+
   .metric-grid {
     grid-template-columns: 1fr;
-  }
-
-  .review-row {
-    grid-template-columns: 28px minmax(0, 1fr);
-  }
-
-  .review-row > span:last-of-type,
-  .review-row time {
-    grid-column: 2;
   }
 }

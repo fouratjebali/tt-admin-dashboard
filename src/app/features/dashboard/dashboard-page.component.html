@@ -3,30 +3,59 @@
     <div>
       <span class="dashboard-heading__period">
         <svg lucideCalendarDays size="15"></svg>
-        {{ copy().period }}
+        {{ copy().period }}: {{ periodLabel() }}
       </span>
       <h1>{{ copy().title }}</h1>
       <p>{{ copy().subtitle }}</p>
     </div>
 
     <div class="dashboard-heading__actions">
-      <button class="dashboard-button dashboard-button--ghost" type="button">
+      <label class="dashboard-date">
+        <span>{{ copy().from }}</span>
+        <input type="date" [value]="dateFrom()" (change)="updateDateFrom($event)" />
+      </label>
+      <label class="dashboard-date">
+        <span>{{ copy().to }}</span>
+        <input type="date" [value]="dateTo()" (change)="updateDateTo($event)" />
+      </label>
+      <button
+        class="dashboard-button dashboard-button--ghost"
+        type="button"
+        (click)="loadAnalytics()"
+      >
+        <svg lucideFilter size="16"></svg>
+        {{ copy().apply }}
+      </button>
+      <button
+        class="dashboard-button dashboard-button--ghost"
+        type="button"
+        [disabled]="loading()"
+        (click)="loadAnalytics()"
+      >
         <svg lucideRefreshCw size="16"></svg>
         {{ copy().refresh }}
       </button>
-      <button class="dashboard-button dashboard-button--ghost" type="button">
+      <button class="dashboard-button" type="button" [disabled]="loading()" (click)="exportCsv()">
         <svg lucideDownload size="16"></svg>
         {{ copy().export }}
-      </button>
-      <button class="dashboard-button" type="button">
-        <svg lucideUpload size="16"></svg>
-        {{ copy().importPlanning }}
       </button>
     </div>
   </header>
 
+  @if (error()) {
+    <div class="dashboard-alert" role="alert">
+      <svg lucideCircleAlert size="16"></svg>
+      {{ error() }}
+    </div>
+  } @else if (warning()) {
+    <div class="dashboard-alert dashboard-alert--warning" role="status">
+      <svg lucideCircleAlert size="16"></svg>
+      {{ warning() }}
+    </div>
+  }
+
   <div class="metric-grid">
-    @for (metric of copy().metrics; track metric.label) {
+    @for (metric of metrics(); track metric.label) {
       <article class="metric-card" [class]="'metric-card metric-card--' + metric.tone">
         <span class="metric-card__icon">
           @switch (metric.tone) {
@@ -61,17 +90,19 @@
           <h2>{{ copy().pipelineTitle }}</h2>
           <p>{{ copy().pipelineSubtitle }}</p>
         </div>
-        <button class="dashboard-icon-button" type="button" aria-label="Filter">
-          <svg lucideFilter size="16"></svg>
-        </button>
+        @if (loading()) {
+          <span class="dashboard-loading"><i></i>{{ copy().loading }}</span>
+        } @else {
+          <svg lucideChartColumnIncreasing size="18"></svg>
+        }
       </div>
 
       <div class="pipeline-list">
-        @for (step of copy().pipeline; track step.label) {
+        @for (step of pipeline(); track step.label) {
           <div class="pipeline-step">
             <div class="pipeline-step__label">
               <span>{{ step.label }}</span>
-              <strong>{{ step.value }}%</strong>
+              <strong>{{ step.count }}</strong>
             </div>
             <span class="pipeline-step__bar">
               <span [style.width.%]="step.value"></span>
@@ -84,32 +115,53 @@
     <section class="dashboard-panel">
       <div class="dashboard-panel__header">
         <div>
-          <h2>{{ copy().queueTitle }}</h2>
-          <p>{{ copy().queueSubtitle }}</p>
+          <h2>{{ copy().draftsTitle }}</h2>
         </div>
-        <button class="dashboard-button dashboard-button--compact" type="button">
-          <svg lucideFileText size="15"></svg>
-          {{ copy().reviewDrafts }}
-        </button>
+        <svg lucideFileText size="18"></svg>
       </div>
 
-      <div class="review-list">
-        @for (item of copy().queue; track item.subject) {
-          <article class="review-row">
-            <span class="review-row__status">
-              @if (item.status === 'Blocked' || item.status === 'Bloque') {
-                <svg lucideCircleAlert size="16"></svg>
-              } @else {
-                <svg lucideCircleCheckBig size="16"></svg>
-              }
-            </span>
-            <div>
-              <strong>{{ item.subject }}</strong>
-              <small>{{ item.owner }}</small>
+      @if (draftDistribution().length === 0) {
+        <div class="dashboard-empty">{{ copy().noData }}</div>
+      } @else {
+        <div class="status-list">
+          @for (item of draftDistribution(); track item.label) {
+            <div class="status-row">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
             </div>
-            <span>{{ item.status }}</span>
-            <time>{{ item.time }}</time>
-          </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="dashboard-panel dashboard-panel--wide">
+      <div class="dashboard-panel__header">
+        <div>
+          <h2>{{ copy().filesTitle }}</h2>
+        </div>
+        <svg lucideClock size="18"></svg>
+      </div>
+
+      <div class="activity-table" role="table">
+        <div class="activity-table__head activity-table__head--files" role="row">
+          <span role="columnheader">{{ copy().table.file }}</span>
+          <span role="columnheader">{{ copy().table.status }}</span>
+          <span role="columnheader">{{ copy().table.rows }}</span>
+          <span role="columnheader">{{ copy().table.date }}</span>
+        </div>
+        @if (recentFiles().length === 0) {
+          <div class="dashboard-empty dashboard-empty--table">{{ copy().noData }}</div>
+        } @else {
+          @for (file of recentFiles(); track fileName(file)) {
+            <div class="activity-table__row activity-table__row--files" role="row">
+              <span role="cell">{{ fileName(file) }}</span>
+              <span role="cell">
+                <mark>{{ fileStatus(file) }}</mark>
+              </span>
+              <span role="cell">{{ fileRows(file) }}</span>
+              <time role="cell">{{ fileDate(file) }}</time>
+            </div>
+          }
         }
       </div>
     </section>
@@ -117,29 +169,33 @@
     <section class="dashboard-panel dashboard-panel--wide">
       <div class="dashboard-panel__header">
         <div>
-          <h2>{{ copy().activityTitle }}</h2>
+          <h2>{{ copy().usersTitle }}</h2>
         </div>
-        <svg lucideChartColumnIncreasing size="18"></svg>
+        <svg lucideCircleCheckBig size="18"></svg>
       </div>
 
       <div class="activity-table" role="table">
-        <div class="activity-table__head" role="row">
-          <span role="columnheader">{{ copy().table.action }}</span>
-          <span role="columnheader">{{ copy().table.actor }}</span>
-          <span role="columnheader">{{ copy().table.target }}</span>
-          <span role="columnheader">{{ copy().table.status }}</span>
-          <span role="columnheader">{{ copy().table.time }}</span>
+        <div class="activity-table__head activity-table__head--users" role="row">
+          <span role="columnheader">{{ copy().table.user }}</span>
+          <span role="columnheader">{{ copy().table.prepared }}</span>
+          <span role="columnheader">{{ copy().table.reviewed }}</span>
+          <span role="columnheader">{{ copy().table.sent }}</span>
+          <span role="columnheader">{{ copy().table.total }}</span>
         </div>
-        @for (item of copy().activity; track item.action) {
-          <div class="activity-table__row" role="row">
-            <span role="cell">{{ item.action }}</span>
-            <span role="cell">{{ item.actor }}</span>
-            <span role="cell">{{ item.target }}</span>
-            <span role="cell">
-              <mark>{{ item.status }}</mark>
-            </span>
-            <time role="cell">{{ item.time }}</time>
-          </div>
+        @if (topUsers().length === 0) {
+          <div class="dashboard-empty dashboard-empty--table">{{ copy().noData }}</div>
+        } @else {
+          @for (user of topUsers(); track userName(user)) {
+            <div class="activity-table__row activity-table__row--users" role="row">
+              <span role="cell">{{ userName(user) }}</span>
+              <span role="cell">{{ userPrepared(user) }}</span>
+              <span role="cell">{{ userReviewed(user) }}</span>
+              <span role="cell">{{ userSent(user) }}</span>
+              <span role="cell">
+                <mark>{{ userActions(user) }}</mark>
+              </span>
+            </div>
+          }
         }
       </div>
     </section>
@@ -153,10 +209,10 @@
       </div>
 
       <div class="status-list">
-        @for (item of copy().status; track item.label) {
-          <div class="status-row">
+        @for (item of statusRows(); track item.label) {
+          <div class="status-row" [class.status-row--muted]="!item.available">
             <span>{{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
+            <strong>{{ statusLabel(item.available) }}</strong>
           </div>
         }
       </div>

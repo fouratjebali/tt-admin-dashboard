@@ -18,6 +18,10 @@ import {
   DraftEmail,
   AdminLoginRequest,
   PaginatedResponse,
+  PlanningAnalyticsDrafts,
+  PlanningAnalyticsFiles,
+  PlanningAnalyticsOverview,
+  PlanningAnalyticsUser,
   PlanningContact,
   PlanningImport,
   PlanningSession,
@@ -256,6 +260,35 @@ export class ApiService {
 
   getAutomationJobLogs(jobId: string): Observable<string[]> {
     return this.http.get<string[]>(this.planningUrl(`/automation/jobs/${jobId}/logs`));
+  }
+
+  getPlanningAnalyticsOverview(filters?: ApiFilters): Observable<PlanningAnalyticsOverview> {
+    return this.http.get<PlanningAnalyticsOverview>(this.planningUrl('/analytics/overview'), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  getPlanningAnalyticsFiles(filters?: ApiFilters): Observable<PlanningAnalyticsFiles> {
+    return this.http.get<PlanningAnalyticsFiles>(this.planningUrl('/analytics/files'), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  getPlanningAnalyticsDrafts(filters?: ApiFilters): Observable<PlanningAnalyticsDrafts> {
+    return this.http.get<PlanningAnalyticsDrafts>(this.planningUrl('/analytics/drafts'), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  getPlanningAnalyticsUsers(
+    filters?: ApiFilters,
+  ): Observable<PaginatedResponse<PlanningAnalyticsUser> | PlanningAnalyticsUser[]> {
+    return this.http.get<PaginatedResponse<PlanningAnalyticsUser> | PlanningAnalyticsUser[]>(
+      this.planningUrl('/analytics/users'),
+      {
+        params: this.buildParams(filters),
+      },
+    );
   }
 
   private apiUrl(path: string): string {

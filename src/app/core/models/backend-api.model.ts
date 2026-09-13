@@ -152,3 +152,63 @@ export interface AutomationJob {
   completed_at?: string;
   [key: string]: unknown;
 }
+
+export interface PlanningAnalyticsOverview {
+  imports_total?: number;
+  excel_files_total?: number;
+  csv_files_total?: number;
+  drafts_total?: number;
+  drafts_prepared?: number;
+  drafts_pending_review?: number;
+  drafts_reviewed?: number;
+  drafts_sent?: number;
+  send_history_total?: number;
+  automation_jobs_total?: number;
+  admin_users_total?: number;
+  active_admins?: number;
+  total_planning_actions?: number;
+  [key: string]: unknown;
+}
+
+export interface PlanningAnalyticsFileStat {
+  filename?: string;
+  name?: string;
+  status?: string;
+  extension?: string;
+  created_at?: string;
+  completed_at?: string;
+  treated_at?: string;
+  rows_total?: number;
+  [key: string]: unknown;
+}
+
+export interface PlanningAnalyticsFiles {
+  by_status?: Record<string, number> | Record<string, unknown>[];
+  by_extension?: Record<string, number> | Record<string, unknown>[];
+  recent_treated_files?: PlanningAnalyticsFileStat[];
+  recent_files?: PlanningAnalyticsFileStat[];
+  files?: PlanningAnalyticsFileStat[];
+  [key: string]: unknown;
+}
+
+export interface PlanningAnalyticsDrafts {
+  by_status?: Record<string, number> | Record<string, unknown>[];
+  by_email_type?: Record<string, number> | Record<string, unknown>[];
+  by_day?: Record<string, unknown>[];
+  by_import_batch?: Record<string, unknown>[];
+  [key: string]: unknown;
+}
+
+export interface PlanningAnalyticsUser {
+  user_id?: string;
+  email?: string;
+  full_name?: string;
+  name?: string;
+  drafts_prepared?: number;
+  files_treated?: number;
+  imports_created?: number;
+  drafts_reviewed?: number;
+  drafts_sent?: number;
+  total_planning_actions?: number;
+  [key: string]: unknown;
+}
