@@ -38,6 +38,7 @@ export interface PaginatedResponse<T> {
   offset?: number;
   users?: T[];
   logs?: T[];
+  responsables?: T[];
   data?: T[] | PaginatedResponse<T>;
   results?: T[];
   records?: T[];
@@ -164,14 +165,27 @@ export interface PlanningSession {
 }
 
 export interface ResponsableContact {
-  contact_key: string;
-  role: string;
+  id?: string;
+  responsable_id?: string;
+  contact_key?: string;
+  nom_complet?: string;
+  fonction?: string;
+  grande_residence?: string;
+  role?: string;
   residence?: string;
-  email: string;
-  full_name: string;
+  email?: string;
+  full_name?: string;
   direction?: string;
   hr_responsible?: boolean;
+  created_at?: string;
+  updated_at?: string;
   [key: string]: unknown;
+}
+
+export interface ResponsablePayload {
+  nom_complet: string;
+  fonction: string;
+  grande_residence: string;
 }
 
 export interface PlanningContact {

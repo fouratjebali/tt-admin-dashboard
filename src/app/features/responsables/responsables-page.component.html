@@ -1,0 +1,356 @@
+<section class="responsables-page">
+  <header class="responsables-heading">
+    <div>
+      <span class="responsables-heading__eyebrow">
+        <svg lucideUsersRound size="15"></svg>
+        {{ copy().eyebrow }}
+      </span>
+      <h1>{{ copy().title }}</h1>
+      <p>{{ copy().body }}</p>
+    </div>
+
+    <div class="responsables-heading__actions">
+      <button
+        class="responsables-button responsables-button--ghost"
+        type="button"
+        [disabled]="loading()"
+        (click)="loadResponsables()"
+      >
+        <svg lucideRefreshCw size="16"></svg>
+        {{ copy().refresh }}
+      </button>
+      <button class="responsables-button" type="button" (click)="openCreateForm()">
+        <svg lucidePlus size="16"></svg>
+        {{ copy().add }}
+      </button>
+    </div>
+  </header>
+
+  <div class="responsables-stats">
+    @for (stat of stats(); track stat.label) {
+      <article
+        class="responsables-stat"
+        [class]="'responsables-stat responsables-stat--' + stat.tone"
+      >
+        <span class="responsables-stat__icon">
+          @switch (stat.tone) {
+            @case ('success') {
+              <svg lucideUserRoundCheck size="18"></svg>
+            }
+            @case ('accent') {
+              <svg lucideUserRoundCheck size="18"></svg>
+            }
+            @case ('warning') {
+              <svg lucideUsersRound size="18"></svg>
+            }
+            @default {
+              <svg lucideUsersRound size="18"></svg>
+            }
+          }
+        </span>
+        <span>{{ stat.label }}</span>
+        <strong>{{ stat.value }}</strong>
+      </article>
+    }
+  </div>
+
+  <section class="responsables-panel">
+    <div class="responsables-toolbar">
+      <label class="responsables-search">
+        <svg lucideSearch size="16"></svg>
+        <input
+          [value]="searchTerm()"
+          type="search"
+          [placeholder]="copy().search"
+          (input)="updateSearch($event)"
+        />
+      </label>
+
+      <label class="responsables-filter">
+        <span>{{ copy().residenceFilter }}</span>
+        <select [value]="residenceFilter()" (change)="updateResidenceFilter($event)">
+          <option value="all">{{ copy().allResidences }}</option>
+          @for (residence of residenceOptions(); track residence) {
+            <option [value]="residence">{{ residence }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    @if (error()) {
+      <div class="responsables-alert" role="alert">
+        <span>
+          <svg lucideCircleAlert size="15"></svg>
+          {{ error() }}
+        </span>
+        <button type="button" (click)="loadResponsables()">{{ copy().retry }}</button>
+      </div>
+    }
+
+    <div class="responsables-table" role="table">
+      <div class="responsables-table__head" role="row">
+        <span role="columnheader">{{ copy().responsable }}</span>
+        <span role="columnheader">{{ copy().function }}</span>
+        <span role="columnheader">{{ copy().residence }}</span>
+        <span role="columnheader">{{ copy().created }}</span>
+        <span role="columnheader">{{ copy().actions }}</span>
+      </div>
+
+      @if (loading()) {
+        <div class="responsables-loading">
+          <span></span>
+          {{ copy().loading }}
+        </div>
+      } @else if (visibleResponsables().length === 0) {
+        <div class="responsables-empty">
+          <svg lucideUserRoundCheck size="24"></svg>
+          <strong>{{ copy().emptyTitle }}</strong>
+          <span>{{ copy().emptyBody }}</span>
+        </div>
+      } @else {
+        @for (responsable of visibleResponsables(); track responsableId(responsable)) {
+          <div class="responsables-table__row" role="row">
+            <div class="responsables-person" role="cell">
+              <span class="responsables-person__avatar">{{
+                responsableInitials(responsable)
+              }}</span>
+              <span>
+                <strong>{{ responsableName(responsable) }}</strong>
+                <small>#{{ responsableId(responsable) }}</small>
+              </span>
+            </div>
+
+            <span role="cell">
+              <mark class="responsables-function">{{ functionName(responsable) }}</mark>
+            </span>
+            <span class="responsables-residence" role="cell">{{ residenceName(responsable) }}</span>
+            <time role="cell">{{ formatDate(responsable.created_at) }}</time>
+
+            <span class="responsables-actions" role="cell">
+              <button
+                type="button"
+                [attr.aria-label]="copy().view"
+                [attr.title]="copy().view"
+                (click)="openDetails(responsable)"
+              >
+                <svg lucideEye size="15"></svg>
+              </button>
+              <button
+                type="button"
+                [attr.aria-label]="copy().edit"
+                [attr.title]="copy().edit"
+                (click)="openEditForm(responsable)"
+              >
+                <svg lucidePencil size="15"></svg>
+              </button>
+              <button
+                type="button"
+                [disabled]="isDeleting(responsable)"
+                [attr.aria-label]="copy().delete"
+                [attr.title]="copy().delete"
+                (click)="deleteResponsable(responsable)"
+              >
+                <svg lucideTrash2 size="15"></svg>
+              </button>
+            </span>
+          </div>
+        }
+      }
+    </div>
+
+    <footer class="responsables-pagination">
+      <span
+        >{{ copy().range }} {{ pageStart() }}-{{ pageEnd() }} {{ copy().of }} {{ total() }}</span
+      >
+      <div>
+        <button
+          type="button"
+          [disabled]="!canGoPrevious()"
+          [attr.aria-label]="copy().previous"
+          (click)="previousPage()"
+        >
+          <svg lucideChevronLeft size="16"></svg>
+        </button>
+        <button
+          type="button"
+          [disabled]="!canGoNext()"
+          [attr.aria-label]="copy().next"
+          (click)="nextPage()"
+        >
+          <svg lucideChevronRight size="16"></svg>
+        </button>
+      </div>
+    </footer>
+  </section>
+
+  @if (formOpen()) {
+    <aside
+      class="responsables-drawer"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="copy().add"
+    >
+      <button class="responsables-drawer__scrim" type="button" (click)="closeForm()">
+        <span>{{ copy().close }}</span>
+      </button>
+      <form
+        class="responsables-drawer__panel"
+        [formGroup]="responsableForm"
+        (ngSubmit)="saveResponsable()"
+      >
+        <header>
+          <div>
+            <span>{{ isCreateMode() ? copy().create : copy().update }}</span>
+            <h2>{{ copy().title }}</h2>
+          </div>
+          <button type="button" [attr.aria-label]="copy().close" (click)="closeForm()">
+            <svg lucideX size="18"></svg>
+          </button>
+        </header>
+
+        @if (formError()) {
+          <div class="responsables-alert" role="alert">
+            <span>
+              <svg lucideCircleAlert size="15"></svg>
+              {{ formError() }}
+            </span>
+          </div>
+        }
+
+        <label class="responsables-field">
+          <span>{{ copy().form.name }}</span>
+          <input
+            formControlName="nom_complet"
+            type="text"
+            autocomplete="name"
+            [placeholder]="copy().form.namePlaceholder"
+          />
+          @if (hasFormError('nom_complet')) {
+            <small>{{ copy().form.nameError }}</small>
+          }
+        </label>
+
+        <label class="responsables-field">
+          <span>{{ copy().form.function }}</span>
+          <input
+            formControlName="fonction"
+            type="text"
+            autocomplete="organization-title"
+            [placeholder]="copy().form.functionPlaceholder"
+          />
+          @if (hasFormError('fonction')) {
+            <small>{{ copy().form.functionError }}</small>
+          }
+        </label>
+
+        <label class="responsables-field">
+          <span>{{ copy().form.residence }}</span>
+          <input
+            formControlName="grande_residence"
+            type="text"
+            autocomplete="organization"
+            [placeholder]="copy().form.residencePlaceholder"
+          />
+          @if (hasFormError('grande_residence')) {
+            <small>{{ copy().form.residenceError }}</small>
+          }
+        </label>
+
+        <div class="responsables-drawer__actions">
+          <button
+            class="responsables-button responsables-button--ghost"
+            type="button"
+            (click)="closeForm()"
+          >
+            {{ copy().cancel }}
+          </button>
+          <button
+            class="responsables-button"
+            type="submit"
+            [disabled]="saving() || responsableForm.invalid"
+          >
+            <svg lucideSave size="15"></svg>
+            {{ saving() ? copy().saving : copy().save }}
+          </button>
+        </div>
+      </form>
+    </aside>
+  }
+
+  @if (selectedResponsable(); as responsable) {
+    <aside
+      class="responsables-drawer"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="copy().detail"
+    >
+      <button class="responsables-drawer__scrim" type="button" (click)="closeDetails()">
+        <span>{{ copy().close }}</span>
+      </button>
+      <section class="responsables-drawer__panel">
+        <header>
+          <div>
+            <span>{{ copy().detail }}</span>
+            <h2>{{ responsableName(responsable) }}</h2>
+          </div>
+          <button type="button" [attr.aria-label]="copy().close" (click)="closeDetails()">
+            <svg lucideX size="18"></svg>
+          </button>
+        </header>
+
+        @if (detailLoading()) {
+          <div class="responsables-loading responsables-loading--compact">
+            <span></span>
+            {{ copy().loading }}
+          </div>
+        } @else if (detailError()) {
+          <div class="responsables-alert" role="alert">
+            <span>
+              <svg lucideCircleAlert size="15"></svg>
+              {{ detailError() }}
+            </span>
+          </div>
+        }
+
+        <dl class="responsables-detail">
+          <div>
+            <dt>{{ copy().responsable }}</dt>
+            <dd>{{ responsableName(responsable) }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().function }}</dt>
+            <dd>{{ functionName(responsable) }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().residence }}</dt>
+            <dd>{{ residenceName(responsable) }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().created }}</dt>
+            <dd>{{ formatDate(responsable.created_at) }}</dd>
+          </div>
+        </dl>
+
+        <div class="responsables-drawer__actions">
+          <button
+            class="responsables-button responsables-button--ghost"
+            type="button"
+            (click)="openEditForm(responsable)"
+          >
+            <svg lucidePencil size="15"></svg>
+            {{ copy().edit }}
+          </button>
+          <button
+            class="responsables-button responsables-button--danger"
+            type="button"
+            [disabled]="isDeleting(responsable)"
+            (click)="deleteResponsable(responsable)"
+          >
+            <svg lucideTrash2 size="15"></svg>
+            {{ isDeleting(responsable) ? copy().deleting : copy().delete }}
+          </button>
+        </div>
+      </section>
+    </aside>
+  }
+</section>

@@ -31,6 +31,7 @@ import {
   PlanningImport,
   PlanningSession,
   ResponsableContact,
+  ResponsablePayload,
 } from '../models/backend-api.model';
 
 type ApiFilters = Record<string, string | number | boolean | null | undefined>;
@@ -145,18 +146,26 @@ export class ApiService {
     });
   }
 
-  createResponsable(
-    payload: Omit<ResponsableContact, 'contact_key'>,
-  ): Observable<ResponsableContact> {
+  createResponsable(payload: ResponsablePayload): Observable<ResponsableContact> {
     return this.http.post<ResponsableContact>(this.planningUrl('/responsables'), payload);
   }
 
-  getResponsable(contactKey: string): Observable<ResponsableContact> {
-    return this.http.get<ResponsableContact>(this.planningUrl(`/responsables/${contactKey}`));
+  getResponsable(responsableId: string): Observable<ResponsableContact> {
+    return this.http.get<ResponsableContact>(this.planningUrl(`/responsables/${responsableId}`));
   }
 
-  deleteResponsable(contactKey: string): Observable<void> {
-    return this.http.delete<void>(this.planningUrl(`/responsables/${contactKey}`));
+  updateResponsable(
+    responsableId: string,
+    payload: ResponsablePayload,
+  ): Observable<ResponsableContact> {
+    return this.http.patch<ResponsableContact>(
+      this.planningUrl(`/responsables/${responsableId}`),
+      payload,
+    );
+  }
+
+  deleteResponsable(responsableId: string): Observable<void> {
+    return this.http.delete<void>(this.planningUrl(`/responsables/${responsableId}`));
   }
 
   listMissingContacts(filters?: ApiFilters): Observable<PaginatedResponse<PlanningContact>> {

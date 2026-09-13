@@ -53,7 +53,7 @@ const LAYOUT_COPY = {
       health: 'Health',
       settings: 'Settings',
       audit: 'Audit log',
-      admins: 'Admins',
+      responsables: 'Responsables',
     },
     queueLabel: 'Review queue',
     queueValue: '18',
@@ -80,7 +80,7 @@ const LAYOUT_COPY = {
       health: 'Sante',
       settings: 'Parametres',
       audit: 'Journal audit',
-      admins: 'Admins',
+      responsables: 'Responsables',
     },
     queueLabel: 'File de revue',
     queueValue: '18',
@@ -106,7 +106,13 @@ const NAV_ITEMS: NavItem[] = [
   },
   { labelKey: 'settings', route: '/settings', icon: 'settings', exact: false, roles: ['admin'] },
   { labelKey: 'audit', route: '/audit', icon: 'audit', exact: false, roles: ['admin'] },
-  { labelKey: 'admins', route: '/admins', icon: 'admins', exact: false, roles: ['admin'] },
+  {
+    labelKey: 'responsables',
+    route: '/responsables',
+    icon: 'admins',
+    exact: false,
+    roles: ['admin'],
+  },
 ];
 
 @Component({
