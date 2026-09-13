@@ -212,3 +212,57 @@ export interface PlanningAnalyticsUser {
   total_planning_actions?: number;
   [key: string]: unknown;
 }
+
+export interface AdminDashboardPolicies {
+  review_warning_threshold?: number;
+  audit_retention_days?: number;
+  support_email?: string;
+  [key: string]: unknown;
+}
+
+export interface AdminPlanningAutomationSettings {
+  auto_draft_generation_after_import?: boolean;
+  default_draft_type?: string;
+  include_participants?: boolean;
+  max_drafts_per_run?: number;
+  [key: string]: unknown;
+}
+
+export interface AdminEmailPipelineSettings {
+  enabled?: boolean;
+  interval_minutes?: number;
+  max_emails?: number;
+  [key: string]: unknown;
+}
+
+export interface AdminSettings {
+  policies?: AdminDashboardPolicies;
+  planning_automation?: AdminPlanningAutomationSettings;
+  email_pipeline?: AdminEmailPipelineSettings;
+  [key: string]: unknown;
+}
+
+export interface AdminSettingsSystem {
+  api_prefixes?: string[] | Record<string, unknown>;
+  cors_origins?: string[];
+  db_configured?: boolean;
+  connector_configured?: boolean;
+  outlook_app_configured?: boolean;
+  [key: string]: unknown;
+}
+
+export interface AdminCredentialStatus {
+  username_configured?: boolean;
+  password_configured?: boolean;
+  email_configured?: boolean;
+  display_name_configured?: boolean;
+  [key: string]: unknown;
+}
+
+export interface AdminSettingsSupervision {
+  admin_credentials?: AdminCredentialStatus;
+  policies?: AdminDashboardPolicies;
+  planning_automation?: AdminPlanningAutomationSettings;
+  email_pipeline?: AdminEmailPipelineSettings;
+  [key: string]: unknown;
+}

@@ -5,6 +5,7 @@ import {
   LucideCheck,
   LucideCircleAlert,
   LucideClock,
+  LucideDatabase,
   LucideKeyRound,
   LucideLanguages,
   LucideMail,
@@ -14,46 +15,66 @@ import {
   LucideRefreshCw,
   LucideRotateCcw,
   LucideSave,
+  LucideServer,
   LucideSettings,
   LucideShieldCheck,
   LucideSlidersHorizontal,
   LucideSun,
   LucideUser,
 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 
-import { AutomationSettings } from '../../core/models/backend-api.model';
+import {
+  AdminDashboardPolicies,
+  AdminEmailPipelineSettings,
+  AdminPlanningAutomationSettings,
+  AdminSettings,
+  AdminSettingsSupervision,
+  AdminSettingsSystem,
+} from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Language, PreferencesService, Theme } from '../../core/services/preferences.service';
 
-const REVIEW_THRESHOLD_KEY = 'tt_admin_review_threshold';
-const RETENTION_DAYS_KEY = 'tt_admin_retention_days';
-const SUPPORT_EMAIL_KEY = 'tt_admin_support_email';
-
-interface LocalPolicySettings {
-  reviewThreshold: number;
-  retentionDays: number;
+interface PolicyForm {
+  reviewWarningThreshold: number;
+  auditRetentionDays: number;
   supportEmail: string;
+}
+
+interface AutomationForm {
+  autoDraftGenerationAfterImport: boolean;
+  defaultDraftType: string;
+  includeParticipants: boolean;
+  maxDraftsPerRun: number;
+}
+
+interface EmailPipelineForm {
+  enabled: boolean;
+  intervalMinutes: number;
+  maxEmails: number;
 }
 
 const COPY = {
   en: {
     eyebrow: 'Controls',
     title: 'Global settings',
-    body: 'Tune workspace preferences, automation schedule, review thresholds, and admin session details.',
+    body: 'Tune dashboard policies, planning automation, email pipeline, and supervision signals.',
     refresh: 'Refresh',
     save: 'Save',
     saved: 'Settings saved',
     loading: 'Loading settings',
     retry: 'Retry',
     browserOnly: 'Saved on this browser',
-    connected: 'Connected to backend',
-    notConnected: 'Backend settings unavailable',
+    partial:
+      'Some supervision settings are unavailable. Editable settings that loaded can still be saved.',
     panels: {
       appearance: 'Workspace appearance',
-      automation: 'Automation schedule',
-      policy: 'Review policy',
+      policy: 'Dashboard policies',
+      automation: 'Planning automation',
+      pipeline: 'Email pipeline',
+      system: 'System status',
+      credentials: 'Admin credentials',
       account: 'Admin profile',
     },
     fields: {
@@ -63,52 +84,81 @@ const COPY = {
       french: 'French',
       light: 'Light',
       dark: 'Dark',
-      automationEnabled: 'Enable scheduled automation',
-      schedule: 'Daily run time',
-      timezone: 'Timezone',
-      reviewThreshold: 'Review queue warning',
+      reviewThreshold: 'Review warning threshold',
       retentionDays: 'Audit retention days',
-      supportEmail: 'Support mailbox',
+      supportEmail: 'Support email',
+      autoDraft: 'Auto draft after import',
+      draftType: 'Default draft type',
+      includeParticipants: 'Include participants',
+      maxDrafts: 'Max drafts per run',
+      pipelineEnabled: 'Pipeline enabled',
+      interval: 'Interval minutes',
+      maxEmails: 'Max emails',
       name: 'Name',
       email: 'Email',
       role: 'Role',
       session: 'Session',
     },
+    system: {
+      apiPrefixes: 'API prefixes',
+      corsOrigins: 'CORS origins',
+      dbConfigured: 'Database configured',
+      connectorConfigured: 'Connector configured',
+      outlookConfigured: 'Outlook app configured',
+      username: 'Preset username',
+      password: 'Preset password',
+      email: 'Preset email',
+      displayName: 'Display name',
+    },
     hints: {
       language: 'Changes apply instantly across the admin dashboard.',
       theme: 'Choose the default visual mode for this browser.',
-      automation: 'Persisted through the backend automation settings endpoint.',
-      policy: 'Used as local dashboard defaults until backend policy storage is available.',
+      policy: 'Saved through the admin dashboard policy endpoint.',
+      automation: 'Controls draft generation defaults after planning imports.',
+      pipeline: 'Controls the email sending worker limits.',
+      system: 'Read-only deployment and connector checks from the backend.',
       session: 'Bearer token is available for protected admin requests.',
     },
     values: {
       active: 'Active',
       missing: 'Not available',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+      configured: 'Configured',
+      notConfigured: 'Not configured',
       tokenReady: 'Bearer token ready',
       noToken: 'No local token',
     },
+    draftTypes: {
+      standard: 'Standard',
+      reminder: 'Reminder',
+      escalation: 'Escalation',
+    },
     errors: {
-      load: 'Unable to load automation settings from the admin API.',
-      save: 'Unable to save automation settings.',
+      load: 'Unable to load admin settings from the admin API.',
+      save: 'Unable to save admin settings.',
       network: 'Admin API is unreachable. Check backend URL, proxy, and network.',
     },
   },
   fr: {
     eyebrow: 'Controles',
     title: 'Parametres globaux',
-    body: 'Ajustez les preferences, le planning automation, les seuils de revue et la session admin.',
+    body: "Ajustez les policies dashboard, l'automation planning, le pipeline email et la supervision.",
     refresh: 'Actualiser',
     save: 'Enregistrer',
     saved: 'Parametres enregistres',
     loading: 'Chargement parametres',
     retry: 'Reessayer',
     browserOnly: 'Enregistre sur ce navigateur',
-    connected: 'Connecte au backend',
-    notConnected: 'Parametres backend indisponibles',
+    partial:
+      'Certaines donnees de supervision sont indisponibles. Les parametres charges restent modifiables.',
     panels: {
       appearance: 'Apparence espace',
-      automation: 'Planning automation',
-      policy: 'Politique de revue',
+      policy: 'Policies dashboard',
+      automation: 'Automation planning',
+      pipeline: 'Pipeline email',
+      system: 'Etat systeme',
+      credentials: 'Credentials admin',
       account: 'Profil admin',
     },
     fields: {
@@ -118,33 +168,59 @@ const COPY = {
       french: 'Francais',
       light: 'Clair',
       dark: 'Sombre',
-      automationEnabled: "Activer l'automation planifiee",
-      schedule: 'Heure execution',
-      timezone: 'Fuseau horaire',
-      reviewThreshold: 'Alerte file de revue',
+      reviewThreshold: 'Seuil alerte revue',
       retentionDays: 'Retention audit jours',
-      supportEmail: 'Mailbox support',
+      supportEmail: 'Email support',
+      autoDraft: 'Draft auto apres import',
+      draftType: 'Type draft par defaut',
+      includeParticipants: 'Inclure participants',
+      maxDrafts: 'Max drafts par run',
+      pipelineEnabled: 'Pipeline active',
+      interval: 'Intervalle minutes',
+      maxEmails: 'Max emails',
       name: 'Nom',
       email: 'Email',
       role: 'Role',
       session: 'Session',
     },
+    system: {
+      apiPrefixes: 'Prefixes API',
+      corsOrigins: 'Origines CORS',
+      dbConfigured: 'Database configuree',
+      connectorConfigured: 'Connecteur configure',
+      outlookConfigured: 'App Outlook configuree',
+      username: 'Username preset',
+      password: 'Password preset',
+      email: 'Email preset',
+      displayName: 'Display name',
+    },
     hints: {
       language: "Le changement s'applique directement sur le dashboard admin.",
       theme: 'Choisissez le mode visuel par defaut pour ce navigateur.',
-      automation: "Persiste via l'endpoint backend des parametres automation.",
-      policy: 'Utilise comme defauts locaux jusqu au stockage policy backend.',
+      policy: "Enregistre via l'endpoint des policies dashboard admin.",
+      automation: 'Controle les defauts de generation draft apres import planning.',
+      pipeline: "Controle les limites du worker d'envoi email.",
+      system: 'Controles deploiement et connecteurs en lecture seule depuis le backend.',
       session: 'Le token Bearer est disponible pour les requetes admin protegees.',
     },
     values: {
       active: 'Active',
       missing: 'Non disponible',
+      enabled: 'Active',
+      disabled: 'Desactive',
+      configured: 'Configure',
+      notConfigured: 'Non configure',
       tokenReady: 'Token Bearer pret',
       noToken: 'Aucun token local',
     },
+    draftTypes: {
+      standard: 'Standard',
+      reminder: 'Rappel',
+      escalation: 'Escalade',
+    },
     errors: {
-      load: "Impossible de charger les parametres automation depuis l'API admin.",
-      save: "Impossible d'enregistrer les parametres automation.",
+      load: "Impossible de charger les parametres admin depuis l'API admin.",
+      save: "Impossible d'enregistrer les parametres admin.",
       network: "API admin inaccessible. Verifiez l'URL backend, le proxy et le reseau.",
     },
   },
@@ -157,6 +233,7 @@ const COPY = {
     LucideCheck,
     LucideCircleAlert,
     LucideClock,
+    LucideDatabase,
     LucideKeyRound,
     LucideLanguages,
     LucideMail,
@@ -166,6 +243,7 @@ const COPY = {
     LucideRefreshCw,
     LucideRotateCcw,
     LucideSave,
+    LucideServer,
     LucideSettings,
     LucideShieldCheck,
     LucideSlidersHorizontal,
@@ -185,13 +263,19 @@ export class SettingsPageComponent implements OnInit {
   protected readonly theme = this.preferences.theme;
   protected readonly currentAdmin = this.authService.currentAdmin;
   protected readonly isAuthenticated = this.authService.isAuthenticated;
-  protected readonly automation = signal<AutomationSettings>(this.defaultAutomationSettings());
-  protected readonly policy = signal<LocalPolicySettings>(this.readLocalPolicy());
-  protected readonly loadingAutomation = signal(false);
-  protected readonly savingAutomation = signal(false);
-  protected readonly automationError = signal('');
+  protected readonly settings = signal<AdminSettings | null>(null);
+  protected readonly system = signal<AdminSettingsSystem | null>(null);
+  protected readonly supervision = signal<AdminSettingsSupervision | null>(null);
+  protected readonly policy = signal<PolicyForm>(this.defaultPolicySettings());
+  protected readonly automation = signal<AutomationForm>(this.defaultAutomationSettings());
+  protected readonly emailPipeline = signal<EmailPipelineForm>(this.defaultEmailPipelineSettings());
+  protected readonly loading = signal(false);
+  protected readonly savingPolicies = signal(false);
+  protected readonly savingSettings = signal(false);
+  protected readonly error = signal('');
+  protected readonly warning = signal('');
   protected readonly savedMessage = signal('');
-  protected readonly timezoneOptions = ['Africa/Tunis', 'Africa/Lagos', 'Europe/Paris', 'UTC'];
+  protected readonly draftTypeOptions = ['standard', 'reminder', 'escalation'];
 
   protected readonly accountRows = computed(() => {
     const admin = this.currentAdmin();
@@ -220,8 +304,78 @@ export class SettingsPageComponent implements OnInit {
     ];
   });
 
+  protected readonly systemRows = computed(() => {
+    const system = this.system();
+
+    return [
+      {
+        label: this.copy().system.apiPrefixes,
+        value: this.listLabel(this.valueFrom(system, ['api_prefixes', 'apiPrefixes'])),
+        healthy: true,
+      },
+      {
+        label: this.copy().system.corsOrigins,
+        value: this.listLabel(this.valueFrom(system, ['cors_origins', 'corsOrigins'])),
+        healthy: true,
+      },
+      {
+        label: this.copy().system.dbConfigured,
+        value: this.configuredLabel(
+          this.booleanFrom(system, ['db_configured', 'database_configured']),
+        ),
+        healthy: this.booleanFrom(system, ['db_configured', 'database_configured']),
+      },
+      {
+        label: this.copy().system.connectorConfigured,
+        value: this.configuredLabel(this.booleanFrom(system, ['connector_configured'])),
+        healthy: this.booleanFrom(system, ['connector_configured']),
+      },
+      {
+        label: this.copy().system.outlookConfigured,
+        value: this.configuredLabel(this.booleanFrom(system, ['outlook_app_configured'])),
+        healthy: this.booleanFrom(system, ['outlook_app_configured']),
+      },
+    ];
+  });
+
+  protected readonly credentialRows = computed(() => {
+    const credentials = this.recordFrom(this.supervision(), [
+      'admin_credentials',
+      'credentials',
+      'adminCredentials',
+    ]);
+
+    return [
+      {
+        label: this.copy().system.username,
+        configured: this.booleanFrom(credentials, [
+          'username_configured',
+          'admin_username_configured',
+        ]),
+      },
+      {
+        label: this.copy().system.password,
+        configured: this.booleanFrom(credentials, [
+          'password_configured',
+          'admin_password_configured',
+        ]),
+      },
+      {
+        label: this.copy().system.email,
+        configured: this.booleanFrom(credentials, ['email_configured', 'admin_email_configured']),
+      },
+      {
+        label: this.copy().system.displayName,
+        configured: this.booleanFrom(credentials, [
+          'display_name_configured',
+          'displayNameConfigured',
+        ]),
+      },
+    ];
+  });
+
   ngOnInit(): void {
-    this.loadAutomationSettings();
+    this.loadSettings();
   }
 
   protected setLanguage(language: Language): void {
@@ -234,67 +388,94 @@ export class SettingsPageComponent implements OnInit {
     this.flashSavedMessage(this.copy().browserOnly);
   }
 
-  protected loadAutomationSettings(): void {
-    this.loadingAutomation.set(true);
-    this.automationError.set('');
+  protected loadSettings(): void {
+    const endpointErrors: string[] = [];
 
-    this.apiService
-      .getAutomationSettings()
-      .pipe(finalize(() => this.loadingAutomation.set(false)))
-      .subscribe({
-        next: (settings) => {
-          this.automation.set({
-            ...this.defaultAutomationSettings(),
-            ...settings,
-          });
-        },
-        error: (error: unknown) => {
-          this.automationError.set(this.errorMessage(error, this.copy().errors.load));
-        },
+    this.loading.set(true);
+    this.error.set('');
+    this.warning.set('');
+
+    forkJoin({
+      settings: this.apiService
+        .getAdminSettings()
+        .pipe(catchError((error: unknown) => this.settingsFallback(error, endpointErrors))),
+      system: this.apiService
+        .getAdminSettingsSystem()
+        .pipe(catchError((error: unknown) => this.settingsFallback(error, endpointErrors))),
+      supervision: this.apiService
+        .getAdminSettingsSupervision()
+        .pipe(catchError((error: unknown) => this.settingsFallback(error, endpointErrors))),
+    })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe(({ settings, system, supervision }) => {
+        this.settings.set(settings as AdminSettings | null);
+        this.system.set(system as AdminSettingsSystem | null);
+        this.supervision.set(supervision as AdminSettingsSupervision | null);
+
+        if (settings || supervision) {
+          this.syncEditableForms(settings, supervision);
+        }
+
+        if (!settings && !system && !supervision) {
+          this.error.set(endpointErrors[0] ?? this.copy().errors.load);
+        } else if (endpointErrors.length > 0) {
+          this.warning.set(this.copy().partial);
+        }
       });
   }
 
-  protected saveAutomationSettings(): void {
-    this.savingAutomation.set(true);
-    this.automationError.set('');
+  protected savePolicySettings(): void {
+    this.savingPolicies.set(true);
+    this.error.set('');
 
     this.apiService
-      .updateAutomationSettings(this.automation())
-      .pipe(finalize(() => this.savingAutomation.set(false)))
+      .updateAdminSettingsPolicies(this.policyPayload())
+      .pipe(finalize(() => this.savingPolicies.set(false)))
       .subscribe({
-        next: (settings) => {
-          this.automation.set({
-            ...this.defaultAutomationSettings(),
-            ...settings,
-          });
+        next: (policies) => {
+          this.policy.set(this.policyFormFrom(policies));
+          this.settings.update((settings) => ({
+            ...(settings ?? {}),
+            policies,
+          }));
           this.flashSavedMessage(this.copy().saved);
         },
-        error: (error: unknown) => {
-          this.automationError.set(this.errorMessage(error, this.copy().errors.save));
-        },
+        error: (error: unknown) =>
+          this.error.set(this.errorMessage(error, this.copy().errors.save)),
       });
   }
 
-  protected updateAutomationEnabled(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.automation.update((settings) => ({ ...settings, enabled: input.checked }));
-  }
+  protected saveOperationalSettings(): void {
+    this.savingSettings.set(true);
+    this.error.set('');
 
-  protected updateAutomationSchedule(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.automation.update((settings) => ({ ...settings, schedule: input.value }));
-  }
-
-  protected updateAutomationTimezone(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    this.automation.update((settings) => ({ ...settings, timezone: select.value }));
+    this.apiService
+      .updateAdminSettings({
+        planning_automation: this.automationPayload(),
+        email_pipeline: this.emailPipelinePayload(),
+      })
+      .pipe(finalize(() => this.savingSettings.set(false)))
+      .subscribe({
+        next: (settings) => {
+          this.settings.set(settings);
+          this.syncEditableForms(settings, this.supervision());
+          this.flashSavedMessage(this.copy().saved);
+        },
+        error: (error: unknown) =>
+          this.error.set(this.errorMessage(error, this.copy().errors.save)),
+      });
   }
 
   protected updateReviewThreshold(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.policy.update((settings) => ({
       ...settings,
-      reviewThreshold: this.clampNumber(input.valueAsNumber, 1, 200, settings.reviewThreshold),
+      reviewWarningThreshold: this.clampNumber(
+        input.valueAsNumber,
+        1,
+        500,
+        settings.reviewWarningThreshold,
+      ),
     }));
   }
 
@@ -302,7 +483,12 @@ export class SettingsPageComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     this.policy.update((settings) => ({
       ...settings,
-      retentionDays: this.clampNumber(input.valueAsNumber, 7, 3650, settings.retentionDays),
+      auditRetentionDays: this.clampNumber(
+        input.valueAsNumber,
+        7,
+        3650,
+        settings.auditRetentionDays,
+      ),
     }));
   }
 
@@ -311,55 +497,304 @@ export class SettingsPageComponent implements OnInit {
     this.policy.update((settings) => ({ ...settings, supportEmail: input.value }));
   }
 
-  protected savePolicySettings(): void {
+  protected updateAutoDraft(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.automation.update((settings) => ({
+      ...settings,
+      autoDraftGenerationAfterImport: input.checked,
+    }));
+  }
+
+  protected updateDefaultDraftType(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.automation.update((settings) => ({ ...settings, defaultDraftType: select.value }));
+  }
+
+  protected updateIncludeParticipants(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.automation.update((settings) => ({ ...settings, includeParticipants: input.checked }));
+  }
+
+  protected updateMaxDrafts(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.automation.update((settings) => ({
+      ...settings,
+      maxDraftsPerRun: this.clampNumber(input.valueAsNumber, 1, 1000, settings.maxDraftsPerRun),
+    }));
+  }
+
+  protected updatePipelineEnabled(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.emailPipeline.update((settings) => ({ ...settings, enabled: input.checked }));
+  }
+
+  protected updatePipelineInterval(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.emailPipeline.update((settings) => ({
+      ...settings,
+      intervalMinutes: this.clampNumber(input.valueAsNumber, 1, 1440, settings.intervalMinutes),
+    }));
+  }
+
+  protected updatePipelineMaxEmails(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.emailPipeline.update((settings) => ({
+      ...settings,
+      maxEmails: this.clampNumber(input.valueAsNumber, 1, 10000, settings.maxEmails),
+    }));
+  }
+
+  protected draftTypeLabel(value: string): string {
+    const draftTypes = this.copy().draftTypes;
+
+    return draftTypes[value as keyof typeof draftTypes] ?? value;
+  }
+
+  protected configuredLabel(configured: boolean): string {
+    return configured ? this.copy().values.configured : this.copy().values.notConfigured;
+  }
+
+  protected enabledLabel(enabled: boolean): string {
+    return enabled ? this.copy().values.enabled : this.copy().values.disabled;
+  }
+
+  private syncEditableForms(
+    settings: AdminSettings | null,
+    supervision: AdminSettingsSupervision | null,
+  ): void {
+    this.policy.set(
+      this.policyFormFrom(
+        this.firstRecord([settings, supervision], ['policies', 'dashboard_policies']),
+      ),
+    );
+    this.automation.set(
+      this.automationFormFrom(
+        this.firstRecord([settings, supervision], ['planning_automation', 'automation']),
+      ),
+    );
+    this.emailPipeline.set(
+      this.emailPipelineFormFrom(
+        this.firstRecord([settings, supervision], ['email_pipeline', 'pipeline']),
+      ),
+    );
+  }
+
+  private policyPayload(): AdminDashboardPolicies {
     const policy = this.policy();
 
-    localStorage.setItem(REVIEW_THRESHOLD_KEY, String(policy.reviewThreshold));
-    localStorage.setItem(RETENTION_DAYS_KEY, String(policy.retentionDays));
-    localStorage.setItem(SUPPORT_EMAIL_KEY, policy.supportEmail);
-    this.flashSavedMessage(this.copy().browserOnly);
-  }
-
-  protected resetPolicySettings(): void {
-    const defaults = this.defaultPolicySettings();
-
-    this.policy.set(defaults);
-    localStorage.setItem(REVIEW_THRESHOLD_KEY, String(defaults.reviewThreshold));
-    localStorage.setItem(RETENTION_DAYS_KEY, String(defaults.retentionDays));
-    localStorage.setItem(SUPPORT_EMAIL_KEY, defaults.supportEmail);
-    this.flashSavedMessage(this.copy().browserOnly);
-  }
-
-  private defaultAutomationSettings(): AutomationSettings {
     return {
-      enabled: false,
-      schedule: '08:00',
-      timezone: 'Africa/Tunis',
+      review_warning_threshold: policy.reviewWarningThreshold,
+      audit_retention_days: policy.auditRetentionDays,
+      support_email: policy.supportEmail,
     };
   }
 
-  private defaultPolicySettings(): LocalPolicySettings {
+  private automationPayload(): AdminPlanningAutomationSettings {
+    const automation = this.automation();
+
     return {
-      reviewThreshold: 40,
-      retentionDays: 180,
+      auto_draft_generation_after_import: automation.autoDraftGenerationAfterImport,
+      default_draft_type: automation.defaultDraftType,
+      include_participants: automation.includeParticipants,
+      max_drafts_per_run: automation.maxDraftsPerRun,
+    };
+  }
+
+  private emailPipelinePayload(): AdminEmailPipelineSettings {
+    const pipeline = this.emailPipeline();
+
+    return {
+      enabled: pipeline.enabled,
+      interval_minutes: pipeline.intervalMinutes,
+      max_emails: pipeline.maxEmails,
+    };
+  }
+
+  private policyFormFrom(source: unknown): PolicyForm {
+    const defaults = this.defaultPolicySettings();
+
+    return {
+      reviewWarningThreshold: this.numberFrom(
+        source,
+        ['review_warning_threshold', 'reviewThreshold', 'review_threshold'],
+        defaults.reviewWarningThreshold,
+      ),
+      auditRetentionDays: this.numberFrom(
+        source,
+        ['audit_retention_days', 'auditRetentionDays', 'retention_days'],
+        defaults.auditRetentionDays,
+      ),
+      supportEmail:
+        this.stringFrom(source, ['support_email', 'supportEmail']) || defaults.supportEmail,
+    };
+  }
+
+  private automationFormFrom(source: unknown): AutomationForm {
+    const defaults = this.defaultAutomationSettings();
+
+    return {
+      autoDraftGenerationAfterImport: this.booleanFrom(
+        source,
+        ['auto_draft_generation_after_import', 'autoDraftGenerationAfterImport', 'auto_draft'],
+        defaults.autoDraftGenerationAfterImport,
+      ),
+      defaultDraftType:
+        this.stringFrom(source, ['default_draft_type', 'defaultDraftType']) ||
+        defaults.defaultDraftType,
+      includeParticipants: this.booleanFrom(
+        source,
+        ['include_participants', 'includeParticipants'],
+        defaults.includeParticipants,
+      ),
+      maxDraftsPerRun: this.numberFrom(
+        source,
+        ['max_drafts_per_run', 'maxDraftsPerRun'],
+        defaults.maxDraftsPerRun,
+      ),
+    };
+  }
+
+  private emailPipelineFormFrom(source: unknown): EmailPipelineForm {
+    const defaults = this.defaultEmailPipelineSettings();
+
+    return {
+      enabled: this.booleanFrom(source, ['enabled'], defaults.enabled),
+      intervalMinutes: this.numberFrom(
+        source,
+        ['interval_minutes', 'intervalMinutes', 'interval'],
+        defaults.intervalMinutes,
+      ),
+      maxEmails: this.numberFrom(
+        source,
+        ['max_emails', 'maxEmails', 'max_emails_per_run'],
+        defaults.maxEmails,
+      ),
+    };
+  }
+
+  private defaultPolicySettings(): PolicyForm {
+    return {
+      reviewWarningThreshold: 40,
+      auditRetentionDays: 180,
       supportEmail: 'dashboard.admin@tunisietelecom.tn',
     };
   }
 
-  private readLocalPolicy(): LocalPolicySettings {
-    const defaults = this.defaultPolicySettings();
-
+  private defaultAutomationSettings(): AutomationForm {
     return {
-      reviewThreshold: this.readNumber(REVIEW_THRESHOLD_KEY, defaults.reviewThreshold),
-      retentionDays: this.readNumber(RETENTION_DAYS_KEY, defaults.retentionDays),
-      supportEmail: localStorage.getItem(SUPPORT_EMAIL_KEY) ?? defaults.supportEmail,
+      autoDraftGenerationAfterImport: false,
+      defaultDraftType: 'standard',
+      includeParticipants: true,
+      maxDraftsPerRun: 250,
     };
   }
 
-  private readNumber(key: string, fallback: number): number {
-    const value = Number(localStorage.getItem(key));
+  private defaultEmailPipelineSettings(): EmailPipelineForm {
+    return {
+      enabled: true,
+      intervalMinutes: 15,
+      maxEmails: 100,
+    };
+  }
 
-    return Number.isFinite(value) && value > 0 ? value : fallback;
+  private firstRecord(sources: unknown[], keys: string[]): Record<string, unknown> | null {
+    for (const source of sources) {
+      const record = this.recordFrom(source, keys);
+
+      if (record) {
+        return record;
+      }
+    }
+
+    return null;
+  }
+
+  private recordFrom(source: unknown, keys: string[]): Record<string, unknown> | null {
+    if (!source || typeof source !== 'object') {
+      return null;
+    }
+
+    const record = source as Record<string, unknown>;
+
+    for (const key of keys) {
+      const value = record[key];
+
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        return value as Record<string, unknown>;
+      }
+    }
+
+    return null;
+  }
+
+  private valueFrom(source: unknown, keys: string[]): unknown {
+    if (!source || typeof source !== 'object') {
+      return undefined;
+    }
+
+    const record = source as Record<string, unknown>;
+
+    for (const key of keys) {
+      if (record[key] !== undefined && record[key] !== null) {
+        return record[key];
+      }
+    }
+
+    return undefined;
+  }
+
+  private stringFrom(source: unknown, keys: string[]): string {
+    const value = this.valueFrom(source, keys);
+
+    return typeof value === 'string' ? value : '';
+  }
+
+  private numberFrom(source: unknown, keys: string[], fallback: number): number {
+    const value = this.valueFrom(source, keys);
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string' && Number.isFinite(Number(value))) {
+      return Number(value);
+    }
+
+    return fallback;
+  }
+
+  private booleanFrom(source: unknown, keys: string[], fallback = false): boolean {
+    const value = this.valueFrom(source, keys);
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      return value === 'true' || value === 'configured' || value === 'enabled';
+    }
+
+    return fallback;
+  }
+
+  private listLabel(value: unknown): string {
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ') : this.copy().values.missing;
+    }
+
+    if (value && typeof value === 'object') {
+      const entries = Object.entries(value as Record<string, unknown>);
+
+      return entries.length > 0
+        ? entries.map(([key, item]) => `${key}: ${String(item)}`).join(', ')
+        : this.copy().values.missing;
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+
+    return this.copy().values.missing;
   }
 
   private clampNumber(value: number, min: number, max: number, fallback: number): number {
@@ -368,6 +803,12 @@ export class SettingsPageComponent implements OnInit {
     }
 
     return Math.min(max, Math.max(min, Math.round(value)));
+  }
+
+  private settingsFallback(error: unknown, endpointErrors: string[]) {
+    endpointErrors.push(this.errorMessage(error, this.copy().errors.load));
+
+    return of(null);
   }
 
   private flashSavedMessage(message: string): void {

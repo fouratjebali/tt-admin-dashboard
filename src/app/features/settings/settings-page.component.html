@@ -9,13 +9,41 @@
       <p>{{ copy().body }}</p>
     </div>
 
-    @if (savedMessage()) {
-      <span class="settings-saved">
-        <svg lucideCheck size="14"></svg>
-        {{ savedMessage() }}
-      </span>
-    }
+    <div class="settings-heading__actions">
+      @if (savedMessage()) {
+        <span class="settings-saved">
+          <svg lucideCheck size="14"></svg>
+          {{ savedMessage() }}
+        </span>
+      }
+      <button
+        class="settings-button settings-button--ghost"
+        type="button"
+        [disabled]="loading()"
+        (click)="loadSettings()"
+      >
+        <svg lucideRefreshCw size="15"></svg>
+        {{ copy().refresh }}
+      </button>
+    </div>
   </header>
+
+  @if (error()) {
+    <div class="settings-alert" role="alert">
+      <span>
+        <svg lucideCircleAlert size="15"></svg>
+        {{ error() }}
+      </span>
+      <button type="button" (click)="loadSettings()">{{ copy().retry }}</button>
+    </div>
+  } @else if (warning()) {
+    <div class="settings-alert settings-alert--warning" role="status">
+      <span>
+        <svg lucideCircleAlert size="15"></svg>
+        {{ warning() }}
+      </span>
+    </div>
+  }
 
   <div class="settings-grid">
     <section class="settings-panel">
@@ -82,82 +110,6 @@
 
     <section class="settings-panel">
       <div class="settings-panel__heading">
-        <span class="settings-panel__icon settings-panel__icon--accent">
-          <svg lucideClock size="18"></svg>
-        </span>
-        <div>
-          <h2>{{ copy().panels.automation }}</h2>
-          <p>{{ copy().hints.automation }}</p>
-        </div>
-      </div>
-
-      @if (automationError()) {
-        <div class="settings-alert" role="alert">
-          <span>
-            <svg lucideCircleAlert size="15"></svg>
-            {{ automationError() }}
-          </span>
-          <button type="button" (click)="loadAutomationSettings()">{{ copy().retry }}</button>
-        </div>
-      }
-
-      <label class="settings-switch">
-        <span>
-          <svg lucideBell size="15"></svg>
-          {{ copy().fields.automationEnabled }}
-        </span>
-        <input
-          type="checkbox"
-          [checked]="automation().enabled"
-          (change)="updateAutomationEnabled($event)"
-        />
-        <i></i>
-      </label>
-
-      <div class="settings-inline">
-        <label>
-          <span>{{ copy().fields.schedule }}</span>
-          <input
-            type="time"
-            [value]="automation().schedule"
-            (input)="updateAutomationSchedule($event)"
-          />
-        </label>
-
-        <label>
-          <span>{{ copy().fields.timezone }}</span>
-          <select [value]="automation().timezone" (change)="updateAutomationTimezone($event)">
-            @for (timezone of timezoneOptions; track timezone) {
-              <option [value]="timezone">{{ timezone }}</option>
-            }
-          </select>
-        </label>
-      </div>
-
-      <div class="settings-actions">
-        <button
-          class="settings-button settings-button--ghost"
-          type="button"
-          [disabled]="loadingAutomation()"
-          (click)="loadAutomationSettings()"
-        >
-          <svg lucideRefreshCw size="15"></svg>
-          {{ copy().refresh }}
-        </button>
-        <button
-          class="settings-button"
-          type="button"
-          [disabled]="savingAutomation()"
-          (click)="saveAutomationSettings()"
-        >
-          <svg lucideSave size="15"></svg>
-          {{ copy().save }}
-        </button>
-      </div>
-    </section>
-
-    <section class="settings-panel">
-      <div class="settings-panel__heading">
         <span class="settings-panel__icon settings-panel__icon--warning">
           <svg lucideSlidersHorizontal size="18"></svg>
         </span>
@@ -172,9 +124,9 @@
           <span>{{ copy().fields.reviewThreshold }}</span>
           <input
             min="1"
-            max="200"
+            max="500"
             type="number"
-            [value]="policy().reviewThreshold"
+            [value]="policy().reviewWarningThreshold"
             (input)="updateReviewThreshold($event)"
           />
         </label>
@@ -185,7 +137,7 @@
             min="7"
             max="3650"
             type="number"
-            [value]="policy().retentionDays"
+            [value]="policy().auditRetentionDays"
             (input)="updateRetentionDays($event)"
           />
         </label>
@@ -200,12 +152,18 @@
         <button
           class="settings-button settings-button--ghost"
           type="button"
-          (click)="resetPolicySettings()"
+          [disabled]="loading()"
+          (click)="loadSettings()"
         >
           <svg lucideRotateCcw size="15"></svg>
           {{ copy().refresh }}
         </button>
-        <button class="settings-button" type="button" (click)="savePolicySettings()">
+        <button
+          class="settings-button"
+          type="button"
+          [disabled]="savingPolicies()"
+          (click)="savePolicySettings()"
+        >
           <svg lucideSave size="15"></svg>
           {{ copy().save }}
         </button>
@@ -214,8 +172,181 @@
 
     <section class="settings-panel">
       <div class="settings-panel__heading">
+        <span class="settings-panel__icon settings-panel__icon--accent">
+          <svg lucideClock size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.automation }}</h2>
+          <p>{{ copy().hints.automation }}</p>
+        </div>
+      </div>
+
+      <label class="settings-switch">
+        <span>
+          <svg lucideBell size="15"></svg>
+          {{ copy().fields.autoDraft }}
+        </span>
+        <input
+          type="checkbox"
+          [checked]="automation().autoDraftGenerationAfterImport"
+          (change)="updateAutoDraft($event)"
+        />
+        <i></i>
+      </label>
+
+      <label class="settings-switch">
+        <span>
+          <svg lucideUser size="15"></svg>
+          {{ copy().fields.includeParticipants }}
+        </span>
+        <input
+          type="checkbox"
+          [checked]="automation().includeParticipants"
+          (change)="updateIncludeParticipants($event)"
+        />
+        <i></i>
+      </label>
+
+      <div class="settings-inline">
+        <label>
+          <span>{{ copy().fields.draftType }}</span>
+          <select [value]="automation().defaultDraftType" (change)="updateDefaultDraftType($event)">
+            @for (type of draftTypeOptions; track type) {
+              <option [value]="type">{{ draftTypeLabel(type) }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>{{ copy().fields.maxDrafts }}</span>
+          <input
+            min="1"
+            max="1000"
+            type="number"
+            [value]="automation().maxDraftsPerRun"
+            (input)="updateMaxDrafts($event)"
+          />
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
+        <span class="settings-panel__icon settings-panel__icon--secure">
+          <svg lucideMail size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.pipeline }}</h2>
+          <p>{{ copy().hints.pipeline }}</p>
+        </div>
+      </div>
+
+      <label class="settings-switch">
+        <span>
+          <svg lucideMail size="15"></svg>
+          {{ copy().fields.pipelineEnabled }}
+        </span>
+        <input
+          type="checkbox"
+          [checked]="emailPipeline().enabled"
+          (change)="updatePipelineEnabled($event)"
+        />
+        <i></i>
+      </label>
+
+      <div class="settings-inline">
+        <label>
+          <span>{{ copy().fields.interval }}</span>
+          <input
+            min="1"
+            max="1440"
+            type="number"
+            [value]="emailPipeline().intervalMinutes"
+            (input)="updatePipelineInterval($event)"
+          />
+        </label>
+
+        <label>
+          <span>{{ copy().fields.maxEmails }}</span>
+          <input
+            min="1"
+            max="10000"
+            type="number"
+            [value]="emailPipeline().maxEmails"
+            (input)="updatePipelineMaxEmails($event)"
+          />
+        </label>
+      </div>
+
+      <div class="settings-actions">
+        <button
+          class="settings-button"
+          type="button"
+          [disabled]="savingSettings()"
+          (click)="saveOperationalSettings()"
+        >
+          <svg lucideSave size="15"></svg>
+          {{ copy().save }}
+        </button>
+      </div>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
+        <span class="settings-panel__icon">
+          <svg lucideServer size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.system }}</h2>
+          <p>{{ copy().hints.system }}</p>
+        </div>
+      </div>
+
+      <div class="settings-profile settings-profile--status">
+        @for (row of systemRows(); track row.label) {
+          <div [class.settings-row--bad]="!row.healthy">
+            @if (row.healthy) {
+              <svg lucideCheck size="16"></svg>
+            } @else {
+              <svg lucideCircleAlert size="16"></svg>
+            }
+            <span>{{ row.label }}</span>
+            <strong>{{ row.value }}</strong>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
         <span class="settings-panel__icon settings-panel__icon--secure">
           <svg lucideShieldCheck size="18"></svg>
+        </span>
+        <div>
+          <h2>{{ copy().panels.credentials }}</h2>
+          <p>{{ copy().hints.session }}</p>
+        </div>
+      </div>
+
+      <div class="settings-profile settings-profile--status">
+        @for (row of credentialRows(); track row.label) {
+          <div [class.settings-row--bad]="!row.configured">
+            @if (row.configured) {
+              <svg lucideCheck size="16"></svg>
+            } @else {
+              <svg lucideCircleAlert size="16"></svg>
+            }
+            <span>{{ row.label }}</span>
+            <strong>{{ configuredLabel(row.configured) }}</strong>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="settings-panel">
+      <div class="settings-panel__heading">
+        <span class="settings-panel__icon settings-panel__icon--secure">
+          <svg lucideDatabase size="18"></svg>
         </span>
         <div>
           <h2>{{ copy().panels.account }}</h2>

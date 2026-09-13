@@ -7,6 +7,10 @@ import {
   AdminIdentity,
   AdminOverview,
   AdminRole,
+  AdminDashboardPolicies,
+  AdminSettings,
+  AdminSettingsSupervision,
+  AdminSettingsSystem,
   AdminUser,
   AuditLog,
   AutomationJob,
@@ -289,6 +293,28 @@ export class ApiService {
         params: this.buildParams(filters),
       },
     );
+  }
+
+  getAdminSettings(): Observable<AdminSettings> {
+    return this.http.get<AdminSettings>(this.adminUrl('/settings'));
+  }
+
+  updateAdminSettings(payload: Partial<AdminSettings>): Observable<AdminSettings> {
+    return this.http.patch<AdminSettings>(this.adminUrl('/settings'), payload);
+  }
+
+  updateAdminSettingsPolicies(
+    payload: Partial<AdminDashboardPolicies>,
+  ): Observable<AdminDashboardPolicies> {
+    return this.http.patch<AdminDashboardPolicies>(this.adminUrl('/settings/policies'), payload);
+  }
+
+  getAdminSettingsSystem(): Observable<AdminSettingsSystem> {
+    return this.http.get<AdminSettingsSystem>(this.adminUrl('/settings/system'));
+  }
+
+  getAdminSettingsSupervision(): Observable<AdminSettingsSupervision> {
+    return this.http.get<AdminSettingsSupervision>(this.adminUrl('/settings/supervision'));
   }
 
   private apiUrl(path: string): string {
