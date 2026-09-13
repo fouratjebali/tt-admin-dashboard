@@ -18,31 +18,37 @@ export const routes: Routes = [
     path: '',
     component: DashboardPageComponent,
     canActivate: [authGuard],
+    data: { roles: ['admin', 'reviewer', 'viewer'] },
     pathMatch: 'full',
   },
   {
     path: 'users',
     component: UsersPageComponent,
     canActivate: [authGuard],
+    data: { roles: ['admin'] },
   },
   {
     path: 'health',
     component: HealthPageComponent,
     canActivate: [authGuard],
+    data: { roles: ['admin', 'reviewer', 'viewer'] },
   },
   {
     path: 'settings',
     component: SettingsPageComponent,
     canActivate: [authGuard],
+    data: { roles: ['admin'] },
   },
   {
     path: 'audit',
     component: AuditPageComponent,
     canActivate: [authGuard],
+    data: { roles: ['admin'] },
   },
   {
     path: 'admins',
     component: AdminsPageComponent,
     canActivate: [authGuard],
+    data: { roles: ['admin'] },
   },
 ];

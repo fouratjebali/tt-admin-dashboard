@@ -20,6 +20,7 @@ import {
 } from '@lucide/angular';
 
 import { AuthService } from '../../../core/services/auth.service';
+import { AdminRole } from '../../../core/models/backend-api.model';
 import { Language, PreferencesService } from '../../../core/services/preferences.service';
 
 interface NavItem {
@@ -27,6 +28,7 @@ interface NavItem {
   route: string;
   icon: 'dashboard' | 'users' | 'health' | 'settings' | 'audit' | 'admins';
   exact: boolean;
+  roles?: AdminRole[];
 }
 
 const LAYOUT_COPY = {
@@ -86,6 +88,27 @@ const LAYOUT_COPY = {
   },
 };
 
+const NAV_ITEMS: NavItem[] = [
+  {
+    labelKey: 'dashboard',
+    route: '/',
+    icon: 'dashboard',
+    exact: true,
+    roles: ['admin', 'reviewer', 'viewer'],
+  },
+  { labelKey: 'users', route: '/users', icon: 'users', exact: false, roles: ['admin'] },
+  {
+    labelKey: 'health',
+    route: '/health',
+    icon: 'health',
+    exact: false,
+    roles: ['admin', 'reviewer', 'viewer'],
+  },
+  { labelKey: 'settings', route: '/settings', icon: 'settings', exact: false, roles: ['admin'] },
+  { labelKey: 'audit', route: '/audit', icon: 'audit', exact: false, roles: ['admin'] },
+  { labelKey: 'admins', route: '/admins', icon: 'admins', exact: false, roles: ['admin'] },
+];
+
 @Component({
   selector: 'tt-admin-layout',
   imports: [
@@ -119,7 +142,11 @@ export class AdminLayoutComponent {
   protected readonly copy = computed(() => LAYOUT_COPY[this.preferences.language()]);
   protected readonly currentAdmin = this.authService.currentAdmin;
   protected readonly adminDisplayName = computed(
-    () => this.currentAdmin()?.full_name ?? this.currentAdmin()?.name ?? this.copy().fallbackName,
+    () =>
+      this.currentAdmin()?.display_name ??
+      this.currentAdmin()?.full_name ??
+      this.currentAdmin()?.name ??
+      this.copy().fallbackName,
   );
   protected readonly adminRole = computed(
     () => this.currentAdmin()?.role ?? this.copy().fallbackRole,
@@ -135,14 +162,9 @@ export class AdminLayoutComponent {
     return initials || 'IT';
   });
 
-  protected readonly navItems: NavItem[] = [
-    { labelKey: 'dashboard', route: '/', icon: 'dashboard', exact: true },
-    { labelKey: 'users', route: '/users', icon: 'users', exact: false },
-    { labelKey: 'health', route: '/health', icon: 'health', exact: false },
-    { labelKey: 'settings', route: '/settings', icon: 'settings', exact: false },
-    { labelKey: 'audit', route: '/audit', icon: 'audit', exact: false },
-    { labelKey: 'admins', route: '/admins', icon: 'admins', exact: false },
-  ];
+  protected readonly navItems = computed(() =>
+    NAV_ITEMS.filter((item) => this.authService.canAccessRoles(item.roles)),
+  );
 
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);
@@ -157,7 +179,13 @@ export class AdminLayoutComponent {
   }
 
   protected logout(): void {
-    this.authService.logout();
-    void this.router.navigate(['/login']);
+    this.authService.signOut().subscribe({
+      next: () => {
+        void this.router.navigate(['/login']);
+      },
+      error: () => {
+        void this.router.navigate(['/login']);
+      },
+    });
   }
 }

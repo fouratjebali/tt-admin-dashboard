@@ -4,8 +4,9 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 
-import { AuthService } from '../../core/services/auth.service';
+import { DashboardAccessError, AuthService } from '../../core/services/auth.service';
 import { Language, PreferencesService } from '../../core/services/preferences.service';
+import { backendErrorMessage } from '../../core/utils/api-error.util';
 import { TtIconComponent } from '../../shared/components/icon/icon.component';
 
 const LOGIN_COPY = {
@@ -40,6 +41,7 @@ const LOGIN_COPY = {
     errorNetwork: 'Unable to reach the admin API. Check the backend URL and network.',
     errorCredentials: 'The username or password is incorrect.',
     errorApi: 'The admin API could not complete sign-in. Please try again.',
+    errorAccess: 'This account does not have active admin dashboard access.',
   },
   fr: {
     secureAccess: 'Acces admin securise',
@@ -72,6 +74,7 @@ const LOGIN_COPY = {
     errorNetwork: "API admin inaccessible. Verifiez l'URL backend et le reseau.",
     errorCredentials: "Nom d'utilisateur ou mot de passe incorrect.",
     errorApi: "L'API admin n'a pas pu finaliser la connexion. Veuillez reessayer.",
+    errorAccess: "Ce compte n'a pas d'acces actif au dashboard admin.",
   },
 };
 
@@ -146,6 +149,10 @@ export class LoginPageComponent {
   }
 
   private errorMessage(error: unknown): string {
+    if (error instanceof DashboardAccessError) {
+      return this.copy().errorAccess;
+    }
+
     if (!(error instanceof HttpErrorResponse)) {
       return this.copy().errorGeneric;
     }
@@ -155,9 +162,9 @@ export class LoginPageComponent {
     }
 
     if (error.status === 401 || error.status === 403) {
-      return this.copy().errorCredentials;
+      return backendErrorMessage(error, this.copy().errorCredentials);
     }
 
-    return this.copy().errorApi;
+    return backendErrorMessage(error, this.copy().errorApi);
   }
 }

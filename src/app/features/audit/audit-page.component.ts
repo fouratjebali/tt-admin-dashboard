@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import {
   LucideBadgeCheck,
@@ -21,6 +20,7 @@ import { finalize } from 'rxjs';
 import { AuditLog } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
 type AuditFilter = 'all' | string;
 type StatTone = 'neutral' | 'success' | 'accent' | 'warning';
@@ -412,10 +412,10 @@ export class AuditPageComponent implements OnInit, OnDestroy {
   }
 
   private errorMessage(error: unknown): string {
-    if (error instanceof HttpErrorResponse && error.status === 0) {
+    if (isNetworkError(error)) {
       return this.copy().errors.network;
     }
 
-    return this.copy().errors.load;
+    return backendErrorMessage(error, this.copy().errors.load);
   }
 }

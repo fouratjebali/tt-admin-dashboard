@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import {
   LucideChevronLeft,
@@ -16,6 +15,7 @@ import { finalize } from 'rxjs';
 import { AdminRole, AdminUser, PaginatedResponse } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 type RoleFilter = 'all' | AdminRole;
@@ -493,10 +493,10 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   }
 
   private errorMessage(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && error.status === 0) {
+    if (isNetworkError(error)) {
       return this.copy().errors.network;
     }
 
-    return fallback;
+    return backendErrorMessage(error, fallback);
   }
 }

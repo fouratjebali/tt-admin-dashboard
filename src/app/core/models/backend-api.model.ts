@@ -8,16 +8,27 @@ export interface AdminLoginRequest {
 export interface AdminIdentity {
   id: string;
   email: string;
+  display_name?: string;
   full_name?: string;
   name?: string;
+  photo_url?: string | null;
   role: AdminRole;
   is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface BackendSession {
   session_token: string;
   user?: AdminIdentity;
+  token_type?: string;
   expires_at?: string;
+}
+
+export interface ApiStatusResponse<T> {
+  status?: string;
+  settings?: T;
+  [key: string]: unknown;
 }
 
 export interface PaginatedResponse<T> {
@@ -25,9 +36,55 @@ export interface PaginatedResponse<T> {
   total?: number;
   limit?: number;
   offset?: number;
+  users?: T[];
+  logs?: T[];
+  data?: T[] | PaginatedResponse<T>;
+  results?: T[];
+  records?: T[];
 }
 
 export interface AdminOverview {
+  generated_at?: string;
+  users?: {
+    total?: number;
+    active?: number;
+    inactive?: number;
+    admins?: number;
+    reviewers?: number;
+    viewers?: number;
+    regular_users?: number;
+  };
+  email?: {
+    total?: number;
+    unread?: number;
+    awaiting_review?: number;
+    urgent?: number;
+    analysed?: number;
+    pending?: number;
+    ignored?: number;
+    sent_replies?: number;
+    received_today?: number;
+    received_last_7_days?: number;
+  };
+  notifications?: {
+    total?: number;
+    unread?: number;
+  };
+  training?: {
+    available?: boolean;
+    source?: string;
+    message?: string | null;
+    total_sessions?: number;
+    total_participants?: number;
+    drafts_waiting_review?: number;
+    missing_responsibles?: number;
+    sent_drafts?: number;
+  };
+  system?: {
+    api_prefix?: string;
+    admin_api_prefix?: string;
+    admin_base_path?: string;
+  };
   users_total?: number;
   active_users?: number;
   inactive_users?: number;
@@ -45,7 +102,9 @@ export interface AdminUser {
   username?: string;
   name?: string;
   email: string;
+  display_name?: string;
   full_name?: string;
+  photo_url?: string | null;
   role: AdminRole;
   is_active: boolean;
   created_at?: string;
@@ -57,11 +116,28 @@ export interface AuditLog {
   id: string;
   actor_user_id?: string;
   actor_email?: string;
+  actor_role?: string;
   action: string;
   resource_type?: string;
   resource_id?: string;
+  status?: string;
   metadata?: Record<string, unknown>;
   created_at: string;
+}
+
+export interface AdminHealthService {
+  name: string;
+  status: string;
+  message?: string;
+  [key: string]: unknown;
+}
+
+export interface AdminHealth {
+  status: string;
+  checked_at?: string;
+  latency_ms?: number;
+  services?: AdminHealthService[];
+  [key: string]: unknown;
 }
 
 export interface PlanningImport {
@@ -156,6 +232,27 @@ export interface AutomationJob {
 }
 
 export interface PlanningAnalyticsOverview {
+  status?: string;
+  totals?: {
+    imports?: number;
+    files?: number;
+    sessions?: number;
+    participants?: number;
+    drafts?: number;
+    sent?: number;
+  };
+  drafts?: {
+    waiting_review?: number;
+    approved?: number;
+    sent?: number;
+    rejected?: number;
+  };
+  admin_usage?: {
+    imports_created?: number;
+    drafts_generated?: number;
+    drafts_reviewed?: number;
+    drafts_sent?: number;
+  };
   imports_total?: number;
   excel_files_total?: number;
   csv_files_total?: number;
@@ -177,6 +274,7 @@ export interface PlanningAnalyticsFileStat {
   name?: string;
   status?: string;
   extension?: string;
+  imported_at?: string;
   created_at?: string;
   completed_at?: string;
   treated_at?: string;
@@ -185,6 +283,12 @@ export interface PlanningAnalyticsFileStat {
 }
 
 export interface PlanningAnalyticsFiles {
+  status?: string;
+  summary?: {
+    treated_files?: number;
+    successful_files?: number;
+    failed_files?: number;
+  };
   by_status?: Record<string, number> | Record<string, unknown>[];
   by_extension?: Record<string, number> | Record<string, unknown>[];
   recent_treated_files?: PlanningAnalyticsFileStat[];
@@ -194,24 +298,36 @@ export interface PlanningAnalyticsFiles {
 }
 
 export interface PlanningAnalyticsDrafts {
+  status?: string;
+  summary?: {
+    total_drafts?: number;
+    waiting_review?: number;
+    approved?: number;
+    sent?: number;
+    rejected?: number;
+  };
   by_status?: Record<string, number> | Record<string, unknown>[];
   by_email_type?: Record<string, number> | Record<string, unknown>[];
   by_day?: Record<string, unknown>[];
   by_import_batch?: Record<string, unknown>[];
+  recent_batches?: Record<string, unknown>[];
   [key: string]: unknown;
 }
 
 export interface PlanningAnalyticsUser {
   user_id?: string;
+  actor_email?: string;
   email?: string;
   full_name?: string;
   name?: string;
+  drafts_generated?: number;
   drafts_prepared?: number;
   files_treated?: number;
   imports_created?: number;
   drafts_reviewed?: number;
   drafts_sent?: number;
   total_planning_actions?: number;
+  last_activity_at?: string;
   [key: string]: unknown;
 }
 

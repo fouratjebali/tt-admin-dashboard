@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AdminIdentity,
+  AdminHealth,
   AdminOverview,
   AdminRole,
   AdminDashboardPolicies,
@@ -45,8 +46,8 @@ export class ApiService {
     return this.http.post<BackendSession>(this.apiUrl('/auth/admin/login'), payload);
   }
 
-  refreshSession(): Observable<BackendSession> {
-    return this.http.post<BackendSession>(this.apiUrl('/auth/refresh'), {});
+  refreshSession(): Observable<AdminIdentity> {
+    return this.http.post<AdminIdentity>(this.apiUrl('/auth/refresh'), {});
   }
 
   getAuthenticatedUser(): Observable<AdminIdentity> {
@@ -59,6 +60,14 @@ export class ApiService {
 
   getOverview(): Observable<AdminOverview> {
     return this.http.get<AdminOverview>(this.adminUrl('/overview'));
+  }
+
+  getAdminHealth(): Observable<AdminHealth> {
+    return this.http.get<AdminHealth>(this.adminUrl('/health'));
+  }
+
+  logoutAdmin(): Observable<void> {
+    return this.http.post<void>(this.apiUrl('/auth/logout'), {});
   }
 
   listUsers(filters?: ApiFilters): Observable<PaginatedResponse<AdminUser> | AdminUser[]> {
