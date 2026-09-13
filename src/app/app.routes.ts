@@ -5,7 +5,6 @@ import { AuditPageComponent } from './features/audit/audit-page.component';
 import { DashboardPageComponent } from './features/dashboard/dashboard-page.component';
 import { HealthPageComponent } from './features/health/health-page.component';
 import { LoginPageComponent } from './features/login/login-page.component';
-import { ResponsablesPageComponent } from './features/responsables/responsables-page.component';
 import { SettingsPageComponent } from './features/settings/settings-page.component';
 import { UsersPageComponent } from './features/users/users-page.component';
 
@@ -47,7 +46,10 @@ export const routes: Routes = [
   },
   {
     path: 'responsables',
-    component: ResponsablesPageComponent,
+    loadComponent: () =>
+      import('./features/responsables/responsables-page.component').then(
+        (component) => component.ResponsablesPageComponent,
+      ),
     canActivate: [authGuard],
     data: { roles: ['admin'] },
   },

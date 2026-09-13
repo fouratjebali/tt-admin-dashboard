@@ -60,6 +60,9 @@ const COPY = {
     loading: 'Loading responsables',
     saving: 'Saving responsable',
     deleting: 'Deleting responsable',
+    deleteTitle: 'Delete responsable',
+    deleteBody:
+      'This responsable will be removed from the planning directory. This action cannot be undone.',
     emptyTitle: 'No responsables found',
     emptyBody: 'Create a responsable or try another search.',
     range: 'Showing',
@@ -67,7 +70,7 @@ const COPY = {
     previous: 'Previous page',
     next: 'Next page',
     notAvailable: 'Not available',
-    confirmDelete: 'Delete this responsable? This action cannot be undone.',
+    confirmDelete: 'Delete permanently',
     form: {
       name: 'Full name',
       namePlaceholder: 'Responsable RH Gabes',
@@ -120,6 +123,8 @@ const COPY = {
     loading: 'Chargement responsables',
     saving: 'Enregistrement responsable',
     deleting: 'Suppression responsable',
+    deleteTitle: 'Supprimer responsable',
+    deleteBody: 'Ce responsable sera retire du repertoire planning. Cette action est definitive.',
     emptyTitle: 'Aucun responsable',
     emptyBody: 'Creez un responsable ou essayez une autre recherche.',
     range: 'Affichage',
@@ -127,7 +132,7 @@ const COPY = {
     previous: 'Page precedente',
     next: 'Page suivante',
     notAvailable: 'Non disponible',
-    confirmDelete: 'Supprimer ce responsable ? Cette action est definitive.',
+    confirmDelete: 'Supprimer definitivement',
     form: {
       name: 'Nom complet',
       namePlaceholder: 'Responsable RH Gabes',
@@ -187,6 +192,7 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
   protected readonly globalResponsables = signal<ResponsableContact[]>([]);
   protected readonly globalTotal = signal(0);
   protected readonly selectedResponsable = signal<ResponsableContact | null>(null);
+  protected readonly pendingDelete = signal<ResponsableContact | null>(null);
   protected readonly total = signal(0);
   protected readonly offset = signal(0);
   protected readonly loading = signal(false);
@@ -499,8 +505,18 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
     this.detailError.set('');
   }
 
-  protected deleteResponsable(responsable: ResponsableContact): void {
-    if (!window.confirm(this.copy().confirmDelete)) {
+  protected requestDelete(responsable: ResponsableContact): void {
+    this.pendingDelete.set(responsable);
+  }
+
+  protected cancelDelete(): void {
+    this.pendingDelete.set(null);
+  }
+
+  protected confirmDelete(): void {
+    const responsable = this.pendingDelete();
+
+    if (!responsable) {
       return;
     }
 
@@ -529,6 +545,8 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
           ) {
             this.closeDetails();
           }
+
+          this.cancelDelete();
         },
         error: (error: unknown) => {
           this.error.set(this.errorMessage(error, this.copy().errors.delete));

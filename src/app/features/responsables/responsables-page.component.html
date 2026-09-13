@@ -148,7 +148,7 @@
                 [disabled]="isDeleting(responsable)"
                 [attr.aria-label]="copy().delete"
                 [attr.title]="copy().delete"
-                (click)="deleteResponsable(responsable)"
+                (click)="requestDelete(responsable)"
               >
                 <svg lucideTrash2 size="15"></svg>
               </button>
@@ -344,10 +344,59 @@
             class="responsables-button responsables-button--danger"
             type="button"
             [disabled]="isDeleting(responsable)"
-            (click)="deleteResponsable(responsable)"
+            (click)="requestDelete(responsable)"
           >
             <svg lucideTrash2 size="15"></svg>
             {{ isDeleting(responsable) ? copy().deleting : copy().delete }}
+          </button>
+        </div>
+      </section>
+    </aside>
+  }
+
+  @if (pendingDelete(); as responsable) {
+    <aside
+      class="responsables-confirm"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="copy().deleteTitle"
+    >
+      <button class="responsables-confirm__scrim" type="button" (click)="cancelDelete()">
+        <span>{{ copy().cancel }}</span>
+      </button>
+
+      <section class="responsables-confirm__panel">
+        <span class="responsables-confirm__icon">
+          <svg lucideCircleAlert size="22"></svg>
+        </span>
+        <div>
+          <span class="responsables-confirm__eyebrow">{{ copy().delete }}</span>
+          <h2>{{ copy().deleteTitle }}</h2>
+          <p>{{ copy().deleteBody }}</p>
+        </div>
+
+        <div class="responsables-confirm__target">
+          <strong>{{ responsableName(responsable) }}</strong>
+          <span>{{ functionName(responsable) }} - {{ residenceName(responsable) }}</span>
+        </div>
+
+        <div class="responsables-confirm__actions">
+          <button
+            class="responsables-button responsables-button--ghost"
+            type="button"
+            [disabled]="isDeleting(responsable)"
+            (click)="cancelDelete()"
+          >
+            {{ copy().cancel }}
+          </button>
+          <button
+            class="responsables-button responsables-button--danger"
+            type="button"
+            [disabled]="isDeleting(responsable)"
+            (click)="confirmDelete()"
+          >
+            <svg lucideTrash2 size="15"></svg>
+            {{ isDeleting(responsable) ? copy().deleting : copy().confirmDelete }}
           </button>
         </div>
       </section>
