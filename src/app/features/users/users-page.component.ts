@@ -251,7 +251,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
       .updateUserRole(this.userId(user), nextRole)
       .pipe(finalize(() => this.savingUserId.set('')))
       .subscribe({
-        next: (updatedUser) => this.replaceUser(updatedUser),
+        next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser)),
         error: (error: unknown) => {
           select.value = user.role;
           this.error.set(this.errorMessage(error, this.copy().errors.role));
@@ -267,7 +267,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
       .updateUserActive(this.userId(user), !user.is_active)
       .pipe(finalize(() => this.savingUserId.set('')))
       .subscribe({
-        next: (updatedUser) => this.replaceUser(updatedUser),
+        next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser)),
         error: (error: unknown) => {
           this.error.set(this.errorMessage(error, this.copy().errors.status));
         },
@@ -293,7 +293,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   }
 
   protected userInitials(user: AdminUser): string {
-    const name = user.full_name || user.email;
+    const name = user.full_name || user.name || user.username || user.email;
     const initials = name
       .split(/[.\s@_-]+/)
       .filter(Boolean)
@@ -305,7 +305,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   }
 
   protected displayName(user: AdminUser): string {
-    return user.full_name || user.email.split('@')[0] || user.email;
+    return user.full_name || user.name || user.username || user.email.split('@')[0] || user.email;
   }
 
   protected formatDate(value?: string): string {
@@ -329,7 +329,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   }
 
   protected userId(user: AdminUser): string {
-    return user.id ?? user.user_id ?? user.email;
+    return user.id ?? user.user_id ?? user.username ?? user.email;
   }
 
   private replaceUser(updatedUser: AdminUser): void {
@@ -343,16 +343,153 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     total: number;
   } {
     if (Array.isArray(response)) {
+      const items = response.map((user) => this.normalizeUser(user));
+
       return {
-        items: response,
-        total: response.length,
+        items,
+        total: items.length,
       };
     }
 
+    const items = this.userArrayFrom(response).map((user) => this.normalizeUser(user));
+
     return {
-      items: response.items ?? [],
-      total: response.total ?? response.items?.length ?? 0,
+      items,
+      total: this.totalFrom(response, items.length),
     };
+  }
+
+  private normalizeUser(user: unknown): AdminUser {
+    const record = user && typeof user === 'object' ? (user as Record<string, unknown>) : {};
+    const email = this.stringFrom(record, ['email', 'mail', 'user_email']);
+    const username = this.stringFrom(record, ['username', 'login', 'user_name']);
+    const fullName = this.stringFrom(record, ['full_name', 'fullName', 'display_name', 'name']);
+
+    return {
+      id: this.stringFrom(record, ['id', '_id']),
+      user_id: this.stringFrom(record, ['user_id', 'userId']),
+      username,
+      email: email || username,
+      full_name: fullName,
+      role: this.roleFrom(record),
+      is_active: this.activeFrom(record),
+      created_at: this.stringFrom(record, ['created_at', 'createdAt', 'created']),
+      updated_at: this.stringFrom(record, ['updated_at', 'updatedAt', 'updated']),
+      last_login_at: this.stringFrom(record, ['last_login_at', 'lastLoginAt', 'last_login']),
+    };
+  }
+
+  private userArrayFrom(response: PaginatedResponse<AdminUser>): unknown[] {
+    const record = response as unknown as Record<string, unknown>;
+    const direct = this.arrayFrom(record, ['items', 'users', 'data', 'results', 'records']);
+
+    if (direct.length > 0 || Array.isArray(record['items'])) {
+      return direct;
+    }
+
+    const nestedData = record['data'];
+
+    if (nestedData && typeof nestedData === 'object') {
+      return this.arrayFrom(nestedData as Record<string, unknown>, [
+        'items',
+        'users',
+        'results',
+        'records',
+      ]);
+    }
+
+    return [];
+  }
+
+  private arrayFrom(record: Record<string, unknown>, keys: string[]): unknown[] {
+    for (const key of keys) {
+      const value = record[key];
+
+      if (Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    return [];
+  }
+
+  private totalFrom(response: PaginatedResponse<AdminUser>, fallback: number): number {
+    const record = response as unknown as Record<string, unknown>;
+    const directTotal = this.numberFrom(record, ['total', 'count', 'total_count', 'totalCount']);
+
+    if (directTotal !== null) {
+      return directTotal;
+    }
+
+    const nestedData = record['data'];
+
+    if (nestedData && typeof nestedData === 'object') {
+      const nestedTotal = this.numberFrom(nestedData as Record<string, unknown>, [
+        'total',
+        'count',
+        'total_count',
+        'totalCount',
+      ]);
+
+      if (nestedTotal !== null) {
+        return nestedTotal;
+      }
+    }
+
+    return fallback;
+  }
+
+  private roleFrom(record: Record<string, unknown>): AdminRole {
+    const role = this.stringFrom(record, ['role']);
+
+    return this.roles.includes(role as AdminRole) ? (role as AdminRole) : 'user';
+  }
+
+  private activeFrom(record: Record<string, unknown>): boolean {
+    const value =
+      record['is_active'] ?? record['isActive'] ?? record['active'] ?? record['enabled'];
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      return !['false', 'inactive', 'disabled', '0'].includes(value.toLowerCase());
+    }
+
+    return true;
+  }
+
+  private stringFrom(record: Record<string, unknown>, keys: string[]): string {
+    for (const key of keys) {
+      const value = record[key];
+
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return String(value);
+      }
+    }
+
+    return '';
+  }
+
+  private numberFrom(record: Record<string, unknown>, keys: string[]): number | null {
+    for (const key of keys) {
+      const value = record[key];
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+
+      if (typeof value === 'string' && Number.isFinite(Number(value))) {
+        return Number(value);
+      }
+    }
+
+    return null;
   }
 
   private errorMessage(error: unknown, fallback: string): string {

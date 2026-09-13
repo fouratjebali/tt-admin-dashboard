@@ -42,6 +42,8 @@ export interface AdminOverview {
 export interface AdminUser {
   id?: string;
   user_id?: string;
+  username?: string;
+  name?: string;
   email: string;
   full_name?: string;
   role: AdminRole;
