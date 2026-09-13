@@ -14,7 +14,7 @@
         class="responsables-button responsables-button--ghost"
         type="button"
         [disabled]="loading()"
-        (click)="loadResponsables()"
+        (click)="refreshResponsables()"
       >
         <svg lucideRefreshCw size="16"></svg>
         {{ copy().refresh }}
@@ -83,7 +83,7 @@
           <svg lucideCircleAlert size="15"></svg>
           {{ error() }}
         </span>
-        <button type="button" (click)="loadResponsables()">{{ copy().retry }}</button>
+        <button type="button" (click)="refreshResponsables()">{{ copy().retry }}</button>
       </div>
     }
 

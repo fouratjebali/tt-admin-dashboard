@@ -15,7 +15,7 @@ import {
   LucideUsersRound,
   LucideX,
 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
 
 import {
   PaginatedResponse,
@@ -30,6 +30,7 @@ type FormMode = 'create' | 'edit';
 type StatTone = 'neutral' | 'success' | 'accent' | 'warning';
 
 const PAGE_SIZE = 20;
+const STATS_PAGE_SIZE = 200;
 
 const COPY = {
   en: {
@@ -82,7 +83,7 @@ const COPY = {
       total: 'Total responsables',
       residences: 'Residences',
       functions: 'Functions',
-      page: 'Loaded page',
+      pages: 'Directory pages',
     },
     errors: {
       load: 'Unable to load responsables from the planning API.',
@@ -142,7 +143,7 @@ const COPY = {
       total: 'Total responsables',
       residences: 'Residences',
       functions: 'Fonctions',
-      page: 'Page chargee',
+      pages: 'Pages repertoire',
     },
     errors: {
       load: "Impossible de charger les responsables depuis l'API planning.",
@@ -183,10 +184,13 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
 
   protected readonly copy = computed(() => COPY[this.preferences.language()]);
   protected readonly responsables = signal<ResponsableContact[]>([]);
+  protected readonly globalResponsables = signal<ResponsableContact[]>([]);
+  protected readonly globalTotal = signal(0);
   protected readonly selectedResponsable = signal<ResponsableContact | null>(null);
   protected readonly total = signal(0);
   protected readonly offset = signal(0);
   protected readonly loading = signal(false);
+  protected readonly statsLoading = signal(false);
   protected readonly saving = signal(false);
   protected readonly deletingId = signal('');
   protected readonly detailLoading = signal(false);
@@ -208,7 +212,7 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
   protected readonly residenceOptions = computed(() =>
     [
       ...new Set(
-        this.responsables()
+        this.globalResponsables()
           .map((responsable) => this.residenceName(responsable))
           .filter((residence) => residence !== this.copy().notAvailable),
       ),
@@ -223,7 +227,8 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
   );
 
   protected readonly stats = computed(() => {
-    const responsables = this.responsables();
+    const responsables = this.globalResponsables();
+    const globalTotal = this.globalTotal();
     const residences = new Set(
       responsables.map((responsable) => this.residenceName(responsable)).filter(Boolean),
     );
@@ -234,12 +239,26 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
     return [
       {
         label: this.copy().stats.total,
-        value: this.total() || responsables.length,
+        value: this.statsLoading() ? '-' : globalTotal || responsables.length,
         tone: 'neutral' as StatTone,
       },
-      { label: this.copy().stats.residences, value: residences.size, tone: 'success' as StatTone },
-      { label: this.copy().stats.functions, value: functions.size, tone: 'accent' as StatTone },
-      { label: this.copy().stats.page, value: responsables.length, tone: 'warning' as StatTone },
+      {
+        label: this.copy().stats.residences,
+        value: this.statsLoading() ? '-' : residences.size,
+        tone: 'success' as StatTone,
+      },
+      {
+        label: this.copy().stats.functions,
+        value: this.statsLoading() ? '-' : functions.size,
+        tone: 'accent' as StatTone,
+      },
+      {
+        label: this.copy().stats.pages,
+        value: this.statsLoading()
+          ? '-'
+          : Math.ceil((globalTotal || responsables.length) / PAGE_SIZE),
+        tone: 'warning' as StatTone,
+      },
     ];
   });
 
@@ -258,7 +277,7 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
   );
 
   ngOnInit(): void {
-    this.loadResponsables();
+    this.refreshResponsables();
   }
 
   ngOnDestroy(): void {
@@ -289,6 +308,67 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
           this.responsables.set([]);
           this.total.set(0);
           this.error.set(this.errorMessage(error, this.copy().errors.load));
+        },
+      });
+  }
+
+  protected refreshResponsables(): void {
+    this.loadResponsables();
+    this.loadGlobalStats();
+  }
+
+  protected loadGlobalStats(): void {
+    this.statsLoading.set(true);
+
+    this.apiService
+      .listResponsables({
+        limit: STATS_PAGE_SIZE,
+        offset: 0,
+      })
+      .pipe(
+        switchMap((response) => {
+          const firstPage = this.normalizeResponsablesResponse(response);
+          const requests = [];
+
+          for (
+            let currentOffset = STATS_PAGE_SIZE;
+            currentOffset < firstPage.total;
+            currentOffset += STATS_PAGE_SIZE
+          ) {
+            requests.push(
+              this.apiService
+                .listResponsables({ limit: STATS_PAGE_SIZE, offset: currentOffset })
+                .pipe(
+                  map((pageResponse) => this.normalizeResponsablesResponse(pageResponse).items),
+                  catchError(() => of([])),
+                ),
+            );
+          }
+
+          if (requests.length === 0) {
+            return of({
+              items: firstPage.items,
+              total: firstPage.total,
+            });
+          }
+
+          return forkJoin(requests).pipe(
+            map((pages) => ({
+              items: [firstPage.items, ...pages].flat(),
+              total: firstPage.total,
+            })),
+          );
+        }),
+        finalize(() => this.statsLoading.set(false)),
+      )
+      .subscribe({
+        next: (stats) => {
+          this.globalResponsables.set(stats.items);
+          this.globalTotal.set(stats.total);
+        },
+        error: () => {
+          this.globalResponsables.set(this.responsables());
+          this.globalTotal.set(this.total());
         },
       });
   }
@@ -387,6 +467,7 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
           this.total.update((total) => total + 1);
         }
 
+        this.loadGlobalStats();
         this.closeForm();
       },
       error: (error: unknown) => {
@@ -437,6 +518,10 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
             items.filter((item) => this.responsableId(item) !== responsableId),
           );
           this.total.update((total) => Math.max(0, total - 1));
+          this.globalResponsables.update((items) =>
+            items.filter((item) => this.responsableId(item) !== responsableId),
+          );
+          this.globalTotal.update((total) => Math.max(0, total - 1));
 
           if (
             this.selectedResponsable() &&
