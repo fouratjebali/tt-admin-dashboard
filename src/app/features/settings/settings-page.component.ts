@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import {
   LucideBell,
@@ -34,6 +33,7 @@ import {
 } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 import { Language, PreferencesService, Theme } from '../../core/services/preferences.service';
 
 interface PolicyForm {
@@ -284,7 +284,7 @@ export class SettingsPageComponent implements OnInit {
       {
         icon: 'user',
         label: this.copy().fields.name,
-        value: admin?.full_name ?? admin?.name ?? this.copy().values.missing,
+        value: admin?.display_name ?? admin?.full_name ?? admin?.name ?? this.copy().values.missing,
       },
       {
         icon: 'mail',
@@ -306,44 +306,69 @@ export class SettingsPageComponent implements OnInit {
 
   protected readonly systemRows = computed(() => {
     const system = this.system();
+    const backend = this.recordFrom(system, ['backend']);
+    const database = this.recordFrom(system, ['database']);
+    const connector = this.recordFrom(system, ['mail_connector', 'mailConnector']);
 
     return [
       {
         label: this.copy().system.apiPrefixes,
-        value: this.listLabel(this.valueFrom(system, ['api_prefixes', 'apiPrefixes'])),
+        value: this.listLabel(
+          this.valueFrom(backend, ['api_prefix', 'apiPrefix']) ||
+            this.valueFrom(backend, ['admin_api_prefix', 'adminApiPrefix']) ||
+            this.valueFrom(system, ['api_prefixes', 'apiPrefixes']),
+        ),
         healthy: true,
       },
       {
         label: this.copy().system.corsOrigins,
-        value: this.listLabel(this.valueFrom(system, ['cors_origins', 'corsOrigins'])),
+        value: this.listLabel(
+          this.valueFrom(backend, ['cors_origins', 'corsOrigins']) ||
+            this.valueFrom(system, ['cors_origins', 'corsOrigins']),
+        ),
         healthy: true,
       },
       {
         label: this.copy().system.dbConfigured,
         value: this.configuredLabel(
-          this.booleanFrom(system, ['db_configured', 'database_configured']),
+          this.booleanFrom(database, ['configured']) ||
+            this.booleanFrom(system, ['db_configured', 'database_configured']),
         ),
-        healthy: this.booleanFrom(system, ['db_configured', 'database_configured']),
+        healthy:
+          this.booleanFrom(database, ['configured']) ||
+          this.booleanFrom(system, ['db_configured', 'database_configured']),
       },
       {
         label: this.copy().system.connectorConfigured,
-        value: this.configuredLabel(this.booleanFrom(system, ['connector_configured'])),
-        healthy: this.booleanFrom(system, ['connector_configured']),
+        value: this.configuredLabel(
+          this.booleanFrom(connector, ['agent1_configured', 'agent2_configured']) ||
+            this.booleanFrom(system, ['connector_configured']),
+        ),
+        healthy:
+          this.booleanFrom(connector, ['agent1_configured', 'agent2_configured']) ||
+          this.booleanFrom(system, ['connector_configured']),
       },
       {
         label: this.copy().system.outlookConfigured,
-        value: this.configuredLabel(this.booleanFrom(system, ['outlook_app_configured'])),
-        healthy: this.booleanFrom(system, ['outlook_app_configured']),
+        value: this.configuredLabel(
+          this.booleanFrom(connector, ['outlook_client_configured']) ||
+            this.booleanFrom(system, ['outlook_app_configured']),
+        ),
+        healthy:
+          this.booleanFrom(connector, ['outlook_client_configured']) ||
+          this.booleanFrom(system, ['outlook_app_configured']),
       },
     ];
   });
 
   protected readonly credentialRows = computed(() => {
-    const credentials = this.recordFrom(this.supervision(), [
-      'admin_credentials',
-      'credentials',
-      'adminCredentials',
-    ]);
+    const credentials =
+      this.recordFrom(this.system(), ['admin_credentials', 'adminCredentials']) ??
+      this.recordFrom(this.recordFrom(this.supervision(), ['system']), [
+        'admin_credentials',
+        'adminCredentials',
+      ]) ??
+      this.recordFrom(this.supervision(), ['admin_credentials', 'credentials', 'adminCredentials']);
 
     return [
       {
@@ -351,6 +376,7 @@ export class SettingsPageComponent implements OnInit {
         configured: this.booleanFrom(credentials, [
           'username_configured',
           'admin_username_configured',
+          'preset_username_configured',
         ]),
       },
       {
@@ -358,6 +384,7 @@ export class SettingsPageComponent implements OnInit {
         configured: this.booleanFrom(credentials, [
           'password_configured',
           'admin_password_configured',
+          'preset_password_configured',
         ]),
       },
       {
@@ -366,10 +393,9 @@ export class SettingsPageComponent implements OnInit {
       },
       {
         label: this.copy().system.displayName,
-        configured: this.booleanFrom(credentials, [
-          'display_name_configured',
-          'displayNameConfigured',
-        ]),
+        configured:
+          this.booleanFrom(credentials, ['display_name_configured', 'displayNameConfigured']) ||
+          Boolean(this.stringFrom(credentials, ['display_name', 'displayName'])),
       },
     ];
   });
@@ -408,12 +434,16 @@ export class SettingsPageComponent implements OnInit {
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(({ settings, system, supervision }) => {
-        this.settings.set(settings as AdminSettings | null);
-        this.system.set(system as AdminSettingsSystem | null);
-        this.supervision.set(supervision as AdminSettingsSupervision | null);
+        const settingsPayload = this.settingsPayload<AdminSettings>(settings);
+        const systemPayload = this.settingsPayload<AdminSettingsSystem>(system);
+        const supervisionPayload = this.settingsPayload<AdminSettingsSupervision>(supervision);
 
-        if (settings || supervision) {
-          this.syncEditableForms(settings, supervision);
+        this.settings.set(settingsPayload);
+        this.system.set(systemPayload);
+        this.supervision.set(supervisionPayload);
+
+        if (settingsPayload || supervisionPayload || systemPayload) {
+          this.syncEditableForms(settingsPayload, supervisionPayload, systemPayload);
         }
 
         if (!settings && !system && !supervision) {
@@ -433,10 +463,12 @@ export class SettingsPageComponent implements OnInit {
       .pipe(finalize(() => this.savingPolicies.set(false)))
       .subscribe({
         next: (policies) => {
-          this.policy.set(this.policyFormFrom(policies));
+          const policyPayload = this.settingsPayload<AdminDashboardPolicies>(policies) ?? policies;
+
+          this.policy.set(this.policyFormFrom(policyPayload));
           this.settings.update((settings) => ({
             ...(settings ?? {}),
-            policies,
+            policies: policyPayload,
           }));
           this.flashSavedMessage(this.copy().saved);
         },
@@ -450,15 +482,13 @@ export class SettingsPageComponent implements OnInit {
     this.error.set('');
 
     this.apiService
-      .updateAdminSettings({
-        planning_automation: this.automationPayload(),
-        email_pipeline: this.emailPipelinePayload(),
-      })
+      .updateAutomationSettings(this.automationPayload())
       .pipe(finalize(() => this.savingSettings.set(false)))
       .subscribe({
         next: (settings) => {
-          this.settings.set(settings);
-          this.syncEditableForms(settings, this.supervision());
+          const automationPayload =
+            this.settingsPayload<AdminPlanningAutomationSettings>(settings) ?? settings;
+          this.automation.set(this.automationFormFrom(automationPayload));
           this.flashSavedMessage(this.copy().saved);
         },
         error: (error: unknown) =>
@@ -561,20 +591,34 @@ export class SettingsPageComponent implements OnInit {
   private syncEditableForms(
     settings: AdminSettings | null,
     supervision: AdminSettingsSupervision | null,
+    system: AdminSettingsSystem | null,
   ): void {
+    const supervisionSettings = this.recordFrom(supervision, ['settings']);
+    const supervisionSystem = this.recordFrom(supervisionSettings, ['system']);
+    const planningAutomation = this.recordFrom(supervisionSettings, ['planning_automation']);
+
     this.policy.set(
       this.policyFormFrom(
-        this.firstRecord([settings, supervision], ['policies', 'dashboard_policies']),
+        this.firstRecord(
+          [settings, supervision, supervisionSettings],
+          ['policies', 'dashboard_policy', 'dashboard_policies'],
+        ) ?? settings,
       ),
     );
     this.automation.set(
       this.automationFormFrom(
-        this.firstRecord([settings, supervision], ['planning_automation', 'automation']),
+        this.firstRecord(
+          [planningAutomation, settings, supervision, supervisionSettings],
+          ['settings', 'planning_automation', 'automation'],
+        ),
       ),
     );
     this.emailPipeline.set(
       this.emailPipelineFormFrom(
-        this.firstRecord([settings, supervision], ['email_pipeline', 'pipeline']),
+        this.firstRecord(
+          [system, supervisionSystem, settings, supervision, supervisionSettings],
+          ['email_pipeline', 'pipeline'],
+        ),
       ),
     );
   }
@@ -583,7 +627,7 @@ export class SettingsPageComponent implements OnInit {
     const policy = this.policy();
 
     return {
-      review_warning_threshold: policy.reviewWarningThreshold,
+      review_threshold: policy.reviewWarningThreshold,
       audit_retention_days: policy.auditRetentionDays,
       support_email: policy.supportEmail,
     };
@@ -593,9 +637,9 @@ export class SettingsPageComponent implements OnInit {
     const automation = this.automation();
 
     return {
-      auto_draft_generation_after_import: automation.autoDraftGenerationAfterImport,
-      default_draft_type: automation.defaultDraftType,
-      include_participants: automation.includeParticipants,
+      auto_run_after_import: automation.autoDraftGenerationAfterImport,
+      default_email_type: automation.defaultDraftType,
+      include_population: automation.includeParticipants,
       max_drafts_per_run: automation.maxDraftsPerRun,
     };
   }
@@ -635,15 +679,20 @@ export class SettingsPageComponent implements OnInit {
     return {
       autoDraftGenerationAfterImport: this.booleanFrom(
         source,
-        ['auto_draft_generation_after_import', 'autoDraftGenerationAfterImport', 'auto_draft'],
+        [
+          'auto_draft_generation_after_import',
+          'auto_run_after_import',
+          'autoDraftGenerationAfterImport',
+          'auto_draft',
+        ],
         defaults.autoDraftGenerationAfterImport,
       ),
       defaultDraftType:
-        this.stringFrom(source, ['default_draft_type', 'defaultDraftType']) ||
+        this.stringFrom(source, ['default_draft_type', 'default_email_type', 'defaultDraftType']) ||
         defaults.defaultDraftType,
       includeParticipants: this.booleanFrom(
         source,
-        ['include_participants', 'includeParticipants'],
+        ['include_participants', 'include_population', 'includeParticipants'],
         defaults.includeParticipants,
       ),
       maxDraftsPerRun: this.numberFrom(
@@ -661,7 +710,7 @@ export class SettingsPageComponent implements OnInit {
       enabled: this.booleanFrom(source, ['enabled'], defaults.enabled),
       intervalMinutes: this.numberFrom(
         source,
-        ['interval_minutes', 'intervalMinutes', 'interval'],
+        ['interval_minutes', 'interval_seconds', 'intervalMinutes', 'interval'],
         defaults.intervalMinutes,
       ),
       maxEmails: this.numberFrom(
@@ -707,6 +756,19 @@ export class SettingsPageComponent implements OnInit {
     }
 
     return null;
+  }
+
+  private settingsPayload<T>(source: unknown): T | null {
+    if (!source || typeof source !== 'object') {
+      return null;
+    }
+
+    const record = source as Record<string, unknown>;
+    const payload = record['settings'] ?? source;
+
+    return payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? (payload as T)
+      : null;
   }
 
   private recordFrom(source: unknown, keys: string[]): Record<string, unknown> | null {
@@ -817,10 +879,10 @@ export class SettingsPageComponent implements OnInit {
   }
 
   private errorMessage(error: unknown, fallback: string): string {
-    if (error instanceof HttpErrorResponse && error.status === 0) {
+    if (isNetworkError(error)) {
       return this.copy().errors.network;
     }
 
-    return fallback;
+    return backendErrorMessage(error, fallback);
   }
 }

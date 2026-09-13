@@ -14,10 +14,11 @@ import {
   LucideSearch,
   LucideShieldCheck,
   LucideUserRoundSearch,
+  LucideX,
 } from '@lucide/angular';
 import { finalize } from 'rxjs';
 
-import { AuditLog } from '../../core/models/backend-api.model';
+import { AuditLog, PaginatedResponse } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
@@ -51,6 +52,8 @@ const COPY = {
     systemActor: 'System',
     noResource: 'No resource',
     noDetails: 'No metadata',
+    close: 'Close',
+    rawMetadata: 'Raw metadata',
     range: 'Showing',
     of: 'of',
     previous: 'Previous page',
@@ -89,6 +92,8 @@ const COPY = {
     systemActor: 'Systeme',
     noResource: 'Aucune ressource',
     noDetails: 'Aucune metadata',
+    close: 'Fermer',
+    rawMetadata: 'Metadata brute',
     range: 'Affichage',
     of: 'sur',
     previous: 'Page precedente',
@@ -123,6 +128,7 @@ const COPY = {
     LucideSearch,
     LucideShieldCheck,
     LucideUserRoundSearch,
+    LucideX,
   ],
   templateUrl: './audit-page.component.html',
   styleUrl: './audit-page.component.scss',
@@ -141,6 +147,9 @@ export class AuditPageComponent implements OnInit, OnDestroy {
   protected readonly searchTerm = signal('');
   protected readonly actionFilter = signal<AuditFilter>('all');
   protected readonly resourceFilter = signal<AuditFilter>('all');
+  protected readonly selectedLog = signal<AuditLog | null>(null);
+  protected readonly detailLoading = signal(false);
+  protected readonly detailError = signal('');
 
   protected readonly filteredLogs = computed(() =>
     this.logs().filter((log) => {
@@ -219,8 +228,9 @@ export class AuditPageComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (response) => {
-          this.logs.set(response.items ?? []);
-          this.total.set(response.total ?? response.items?.length ?? 0);
+          const normalized = this.normalizeAuditResponse(response);
+          this.logs.set(normalized.items);
+          this.total.set(normalized.total);
         },
         error: (error: unknown) => {
           this.error.set(this.errorMessage(error));
@@ -270,6 +280,25 @@ export class AuditPageComponent implements OnInit, OnDestroy {
 
     this.offset.update((offset) => offset + PAGE_SIZE);
     this.loadAuditLogs();
+  }
+
+  protected openLogDetails(log: AuditLog): void {
+    this.selectedLog.set(log);
+    this.detailError.set('');
+    this.detailLoading.set(true);
+
+    this.apiService
+      .getAuditLog(log.id)
+      .pipe(finalize(() => this.detailLoading.set(false)))
+      .subscribe({
+        next: (response) => this.selectedLog.set(this.normalizeLog(this.unwrapLog(response))),
+        error: (error: unknown) => this.detailError.set(this.errorMessage(error)),
+      });
+  }
+
+  protected closeLogDetails(): void {
+    this.selectedLog.set(null);
+    this.detailError.set('');
   }
 
   protected actorLabel(log: AuditLog): string {
@@ -356,6 +385,10 @@ export class AuditPageComponent implements OnInit, OnDestroy {
       .join(' · ');
   }
 
+  protected rawMetadata(log: AuditLog): string {
+    return JSON.stringify(log.metadata ?? {}, null, 2);
+  }
+
   protected exportCsv(): void {
     const rows = this.filteredLogs();
     const headers = ['date', 'actor', 'action', 'resource_type', 'resource_id', 'metadata'];
@@ -409,6 +442,150 @@ export class AuditPageComponent implements OnInit, OnDestroy {
       date.getMonth() === today.getMonth() &&
       date.getDate() === today.getDate()
     );
+  }
+
+  private normalizeAuditResponse(response: PaginatedResponse<AuditLog> | AuditLog[] | unknown): {
+    items: AuditLog[];
+    total: number;
+  } {
+    if (Array.isArray(response)) {
+      const items = response.map((log) => this.normalizeLog(log));
+
+      return { items, total: items.length };
+    }
+
+    const items = this.auditArrayFrom(response).map((log) => this.normalizeLog(log));
+
+    return {
+      items,
+      total: this.totalFrom(response, items.length),
+    };
+  }
+
+  private auditArrayFrom(response: unknown): unknown[] {
+    const record = this.recordFrom(response);
+
+    if (!record) {
+      return [];
+    }
+
+    const direct = this.arrayFrom(record, ['items', 'logs', 'data', 'results', 'records']);
+
+    if (direct.length > 0) {
+      return direct;
+    }
+
+    return this.arrayFrom(this.recordFrom(record['data']), ['items', 'logs', 'results', 'records']);
+  }
+
+  private unwrapLog(response: unknown): unknown {
+    const record = this.recordFrom(response);
+
+    if (!record) {
+      return response;
+    }
+
+    return record['log'] ?? record['audit_log'] ?? record['item'] ?? response;
+  }
+
+  private normalizeLog(log: unknown): AuditLog {
+    const record = this.recordFrom(log) ?? {};
+    const id = this.stringFrom(record, ['id', 'log_id', '_id']) || crypto.randomUUID();
+    const metadata = record['metadata'];
+
+    return {
+      id,
+      actor_user_id: this.stringFrom(record, ['actor_user_id', 'actorUserId', 'user_id']),
+      actor_email: this.stringFrom(record, ['actor_email', 'actorEmail', 'email']),
+      actor_role: this.stringFrom(record, ['actor_role', 'actorRole', 'role']),
+      action: this.stringFrom(record, ['action', 'event', 'operation']) || 'system.event',
+      resource_type: this.stringFrom(record, ['resource_type', 'resourceType', 'resource']),
+      resource_id: this.stringFrom(record, ['resource_id', 'resourceId']),
+      status: this.stringFrom(record, ['status']),
+      metadata:
+        metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+          ? (metadata as Record<string, unknown>)
+          : undefined,
+      created_at:
+        this.stringFrom(record, ['created_at', 'createdAt', 'timestamp']) ||
+        new Date().toISOString(),
+    };
+  }
+
+  private totalFrom(response: unknown, fallback: number): number {
+    const record = this.recordFrom(response);
+    const direct = this.numberFrom(record, ['total', 'count', 'total_count', 'totalCount']);
+
+    if (direct !== null) {
+      return direct;
+    }
+
+    return (
+      this.numberFrom(this.recordFrom(record?.['data']), [
+        'total',
+        'count',
+        'total_count',
+        'totalCount',
+      ]) ?? fallback
+    );
+  }
+
+  private arrayFrom(record: Record<string, unknown> | null, keys: string[]): unknown[] {
+    if (!record) {
+      return [];
+    }
+
+    for (const key of keys) {
+      const value = record[key];
+
+      if (Array.isArray(value)) {
+        return value;
+      }
+    }
+
+    return [];
+  }
+
+  private recordFrom(source: unknown): Record<string, unknown> | null {
+    return source && typeof source === 'object' && !Array.isArray(source)
+      ? (source as Record<string, unknown>)
+      : null;
+  }
+
+  private stringFrom(record: Record<string, unknown>, keys: string[]): string {
+    for (const key of keys) {
+      const value = record[key];
+
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return String(value);
+      }
+    }
+
+    return '';
+  }
+
+  private numberFrom(record: Record<string, unknown> | null, keys: string[]): number | null {
+    if (!record) {
+      return null;
+    }
+
+    for (const key of keys) {
+      const value = record[key];
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+
+      if (typeof value === 'string' && Number.isFinite(Number(value))) {
+        return Number(value);
+      }
+    }
+
+    return null;
   }
 
   private errorMessage(error: unknown): string {

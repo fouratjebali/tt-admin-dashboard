@@ -343,6 +343,10 @@
   width: 18px;
 }
 
+.audit-loading--compact {
+  min-height: 74px;
+}
+
 .audit-empty {
   display: grid;
   justify-items: center;

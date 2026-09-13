@@ -142,7 +142,11 @@
             </span>
 
             <span class="audit-resource" role="cell">{{ resourceLabel(log) }}</span>
-            <span class="audit-details" role="cell">{{ metadataSummary(log) }}</span>
+            <span class="audit-details" role="cell">
+              <button class="audit-details__button" type="button" (click)="openLogDetails(log)">
+                {{ metadataSummary(log) }}
+              </button>
+            </span>
             <time role="cell">{{ formatDate(log.created_at) }}</time>
           </div>
         }
@@ -173,4 +177,57 @@
       </div>
     </footer>
   </section>
+
+  @if (selectedLog(); as log) {
+    <aside class="audit-drawer" role="dialog" aria-modal="true" [attr.aria-label]="copy().details">
+      <button class="audit-drawer__scrim" type="button" (click)="closeLogDetails()">
+        <span class="audit-drawer__scrim-label">{{ copy().close }}</span>
+      </button>
+      <section class="audit-drawer__panel">
+        <header>
+          <div>
+            <span>{{ copy().details }}</span>
+            <h2>{{ formatAction(log.action) }}</h2>
+          </div>
+          <button type="button" [attr.aria-label]="copy().close" (click)="closeLogDetails()">
+            <svg lucideX size="18"></svg>
+          </button>
+        </header>
+
+        @if (detailLoading()) {
+          <div class="audit-loading audit-loading--compact">
+            <span></span>
+            {{ copy().loading }}
+          </div>
+        } @else if (detailError()) {
+          <div class="audit-alert" role="alert">
+            <span>
+              <svg lucideCircleAlert size="15"></svg>
+              {{ detailError() }}
+            </span>
+          </div>
+        }
+
+        <dl class="audit-drawer__facts">
+          <div>
+            <dt>{{ copy().actor }}</dt>
+            <dd>{{ actorLabel(log) }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().resource }}</dt>
+            <dd>{{ resourceLabel(log) }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().date }}</dt>
+            <dd>{{ formatDate(log.created_at) }}</dd>
+          </div>
+        </dl>
+
+        <div class="audit-drawer__metadata">
+          <span>{{ copy().rawMetadata }}</span>
+          <pre>{{ rawMetadata(log) }}</pre>
+        </div>
+      </section>
+    </aside>
+  }
 </section>

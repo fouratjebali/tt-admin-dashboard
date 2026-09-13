@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import {
   LucideActivity,
@@ -18,12 +17,17 @@ import {
   LucideWifi,
   LucideWorkflow,
 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 
-import { AdminOverview } from '../../core/models/backend-api.model';
+import {
+  AdminHealth,
+  AdminHealthService,
+  AdminOverview,
+} from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
 type HealthStatus = 'healthy' | 'attention' | 'down';
 type HealthIcon = 'api' | 'database' | 'auth' | 'planning' | 'mail' | 'audit';
@@ -224,6 +228,7 @@ export class HealthPageComponent implements OnInit {
   private readonly preferences = inject(PreferencesService);
 
   protected readonly copy = computed(() => COPY[this.preferences.language()]);
+  protected readonly health = signal<AdminHealth | null>(null);
   protected readonly overview = signal<AdminOverview | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal('');
@@ -235,13 +240,13 @@ export class HealthPageComponent implements OnInit {
       return 'down';
     }
 
-    if (!this.overview()) {
+    const health = this.health();
+
+    if (!health) {
       return 'attention';
     }
 
-    return this.pendingReviews() > 40 || !this.authService.isAuthenticated()
-      ? 'attention'
-      : 'healthy';
+    return this.statusFromBackend(health.status);
   });
 
   protected readonly summaryCards = computed(() => {
@@ -276,7 +281,7 @@ export class HealthPageComponent implements OnInit {
       },
       {
         label: this.copy().activeUsers,
-        value: this.formatNumber(this.overview()?.active_users),
+        value: this.formatNumber(this.activeUsers()),
         detail: this.copy().authenticated,
         status: this.authService.isAuthenticated() ? 'healthy' : 'attention',
         icon: 'users',
@@ -285,29 +290,35 @@ export class HealthPageComponent implements OnInit {
   });
 
   protected readonly services = computed(() => {
+    const backendServices = this.health()?.services ?? [];
+
+    if (backendServices.length > 0) {
+      return backendServices.map((service) => this.backendService(service));
+    }
+
     const overview = this.overview();
-    const hasOverview = Boolean(overview && !this.error());
+    const hasHealth = Boolean(this.health() && !this.error());
     const pending = this.pendingReviews();
     const sent = this.asNumber(overview?.drafts_sent);
     const audits = this.asNumber(overview?.audit_events_total);
 
     return [
-      this.service('api', hasOverview ? 'healthy' : this.error() ? 'down' : 'attention', {
+      this.service('api', hasHealth ? 'healthy' : this.error() ? 'down' : 'attention', {
         metric: this.latencyMs() === null ? '-' : `${this.latencyMs()} ms`,
       }),
-      this.service('database', hasOverview ? 'healthy' : this.error() ? 'down' : 'attention', {
-        metric: hasOverview ? this.copy().statuses.healthy : this.copy().noData,
+      this.service('database', hasHealth ? 'healthy' : this.error() ? 'down' : 'attention', {
+        metric: hasHealth ? this.copy().statuses.healthy : this.copy().noData,
       }),
       this.service('auth', this.authService.isAuthenticated() ? 'healthy' : 'attention', {
         metric: this.authService.isAuthenticated() ? 'Bearer' : this.copy().noData,
       }),
-      this.service('planning', hasOverview ? (pending > 40 ? 'attention' : 'healthy') : 'down', {
+      this.service('planning', hasHealth ? (pending > 40 ? 'attention' : 'healthy') : 'down', {
         metric: `${this.formatNumber(pending)} ${this.copy().pendingReview.toLowerCase()}`,
       }),
-      this.service('mail', hasOverview ? (sent > 0 ? 'healthy' : 'attention') : 'down', {
+      this.service('mail', hasHealth ? (sent > 0 ? 'healthy' : 'attention') : 'down', {
         metric: this.formatNumber(sent),
       }),
-      this.service('audit', hasOverview ? (audits > 0 ? 'healthy' : 'attention') : 'down', {
+      this.service('audit', hasHealth ? (audits > 0 ? 'healthy' : 'attention') : 'down', {
         metric: this.formatNumber(audits),
       }),
     ];
@@ -316,7 +327,7 @@ export class HealthPageComponent implements OnInit {
   protected readonly checks = computed(() => [
     {
       label: this.copy().checks.api,
-      status: this.error() ? 'down' : this.overview() ? 'healthy' : 'attention',
+      status: this.error() ? 'down' : this.health() ? this.overallStatus() : 'attention',
     },
     {
       label: this.copy().checks.token,
@@ -328,7 +339,7 @@ export class HealthPageComponent implements OnInit {
     },
     {
       label: this.copy().checks.audit,
-      status: this.asNumber(this.overview()?.audit_events_total) > 0 ? 'healthy' : 'attention',
+      status: this.serviceStatus('audit') ?? 'attention',
     },
   ]);
 
@@ -339,13 +350,13 @@ export class HealthPageComponent implements OnInit {
       { label: this.copy().snapshotLabels.users, value: this.formatNumber(overview?.users_total) },
       {
         label: this.copy().snapshotLabels.admins,
-        value: this.formatNumber(overview?.admins_total),
+        value: this.formatNumber(this.adminUsers()),
       },
       {
         label: this.copy().snapshotLabels.imports,
         value: this.formatNumber(overview?.planning_imports_total),
       },
-      { label: this.copy().snapshotLabels.sent, value: this.formatNumber(overview?.drafts_sent) },
+      { label: this.copy().snapshotLabels.sent, value: this.formatNumber(this.draftsSent()) },
       {
         label: this.copy().snapshotLabels.audits,
         value: this.formatNumber(overview?.audit_events_total),
@@ -359,20 +370,31 @@ export class HealthPageComponent implements OnInit {
 
   protected loadHealth(): void {
     const startedAt = performance.now();
+    const endpointErrors: string[] = [];
 
     this.loading.set(true);
     this.error.set('');
 
-    this.apiService
-      .getOverview()
+    forkJoin({
+      health: this.apiService
+        .getAdminHealth()
+        .pipe(catchError((error: unknown) => this.healthFallback(error, endpointErrors))),
+      overview: this.apiService.getOverview().pipe(catchError(() => of(null))),
+    })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (overview) => {
+        next: ({ health, overview }) => {
+          this.health.set(health);
           this.overview.set(overview);
-          this.latencyMs.set(Math.round(performance.now() - startedAt));
+          this.latencyMs.set(health?.latency_ms ?? Math.round(performance.now() - startedAt));
           this.checkedAt.set(new Date());
+
+          if (!health) {
+            this.error.set(endpointErrors[0] ?? this.copy().errors.load);
+          }
         },
         error: (error: unknown) => {
+          this.health.set(null);
           this.overview.set(null);
           this.latencyMs.set(null);
           this.checkedAt.set(new Date());
@@ -411,12 +433,146 @@ export class HealthPageComponent implements OnInit {
     };
   }
 
+  private backendService(service: AdminHealthService) {
+    const status = this.statusFromBackend(service.status);
+    const icon = this.iconForService(service.name);
+
+    return {
+      icon,
+      name: service.name,
+      status,
+      detail: service.message || this.copy().services[icon][status],
+      metric: service.status,
+    };
+  }
+
   private pendingReviews(): number {
-    return this.asNumber(this.overview()?.drafts_pending_review);
+    return this.numberFrom(this.overview(), [
+      'training.drafts_waiting_review',
+      'drafts_pending_review',
+    ]);
+  }
+
+  private activeUsers(): number | undefined {
+    return this.firstDefinedNumber([
+      this.numberFrom(this.overview(), ['users.active']),
+      this.numberFrom(this.overview(), ['active_users']),
+    ]);
+  }
+
+  private adminUsers(): number | undefined {
+    const overviewUsers = this.overview()?.users;
+
+    if (overviewUsers) {
+      return (
+        this.numberFrom(overviewUsers, ['admins']) +
+        this.numberFrom(overviewUsers, ['reviewers']) +
+        this.numberFrom(overviewUsers, ['viewers'])
+      );
+    }
+
+    return this.firstDefinedNumber([this.numberFrom(this.overview(), ['admins_total'])]);
+  }
+
+  private draftsSent(): number | undefined {
+    return this.firstDefinedNumber([
+      this.numberFrom(this.overview(), ['training.sent_drafts']),
+      this.numberFrom(this.overview(), ['drafts_sent']),
+    ]);
   }
 
   private asNumber(value: unknown): number {
     return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  }
+
+  private numberFrom(source: unknown, paths: string[]): number {
+    for (const path of paths) {
+      const value = this.valueAt(source, path);
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+
+      if (typeof value === 'string' && Number.isFinite(Number(value))) {
+        return Number(value);
+      }
+    }
+
+    return 0;
+  }
+
+  private firstDefinedNumber(values: number[]): number | undefined {
+    return (
+      values.find((value) => value > 0) ?? (values.some((value) => value === 0) ? 0 : undefined)
+    );
+  }
+
+  private valueAt(source: unknown, path: string): unknown {
+    if (!source || typeof source !== 'object') {
+      return undefined;
+    }
+
+    return path.split('.').reduce<unknown>((current, key) => {
+      if (!current || typeof current !== 'object') {
+        return undefined;
+      }
+
+      return (current as Record<string, unknown>)[key];
+    }, source);
+  }
+
+  private statusFromBackend(status: string): HealthStatus {
+    const normalized = status.toLowerCase();
+
+    if (['healthy', 'ok', 'operational', 'up', 'success'].includes(normalized)) {
+      return 'healthy';
+    }
+
+    if (['degraded', 'warning', 'attention', 'slow'].includes(normalized)) {
+      return 'attention';
+    }
+
+    return 'down';
+  }
+
+  private serviceStatus(name: string): HealthStatus | null {
+    const service = this.health()?.services?.find((item) =>
+      item.name.toLowerCase().includes(name.toLowerCase()),
+    );
+
+    return service ? this.statusFromBackend(service.status) : null;
+  }
+
+  private iconForService(name: string): HealthIcon {
+    const normalized = name.toLowerCase();
+
+    if (normalized.includes('database') || normalized.includes('db')) {
+      return 'database';
+    }
+
+    if (normalized.includes('mail') || normalized.includes('outlook')) {
+      return 'mail';
+    }
+
+    if (normalized.includes('audit')) {
+      return 'audit';
+    }
+
+    if (normalized.includes('planning')) {
+      return 'planning';
+    }
+
+    if (normalized.includes('auth') || normalized.includes('session')) {
+      return 'auth';
+    }
+
+    return 'api';
+  }
+
+  private healthFallback(error: unknown, endpointErrors: string[]) {
+    endpointErrors.push(this.errorMessage(error));
+
+    return of(null);
   }
 
   private formatNumber(value: unknown): string {
@@ -430,10 +586,10 @@ export class HealthPageComponent implements OnInit {
   }
 
   private errorMessage(error: unknown): string {
-    if (error instanceof HttpErrorResponse && error.status === 0) {
+    if (isNetworkError(error)) {
       return this.copy().errors.network;
     }
 
-    return this.copy().errors.load;
+    return backendErrorMessage(error, this.copy().errors.load);
   }
 }

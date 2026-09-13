@@ -293,7 +293,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   }
 
   protected userInitials(user: AdminUser): string {
-    const name = user.full_name || user.name || user.username || user.email;
+    const name = user.display_name || user.full_name || user.name || user.username || user.email;
     const initials = name
       .split(/[.\s@_-]+/)
       .filter(Boolean)
@@ -305,7 +305,14 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   }
 
   protected displayName(user: AdminUser): string {
-    return user.full_name || user.name || user.username || user.email.split('@')[0] || user.email;
+    return (
+      user.display_name ||
+      user.full_name ||
+      user.name ||
+      user.username ||
+      user.email.split('@')[0] ||
+      user.email
+    );
   }
 
   protected formatDate(value?: string): string {
@@ -370,7 +377,9 @@ export class UsersPageComponent implements OnInit, OnDestroy {
       user_id: this.stringFrom(record, ['user_id', 'userId']),
       username,
       email: email || username,
+      display_name: this.stringFrom(record, ['display_name', 'displayName']),
       full_name: fullName,
+      photo_url: this.stringFrom(record, ['photo_url', 'photoUrl']),
       role: this.roleFrom(record),
       is_active: this.activeFrom(record),
       created_at: this.stringFrom(record, ['created_at', 'createdAt', 'created']),
