@@ -18,6 +18,8 @@ import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import {
   AdminOverview,
+  AdminUsageAdmin,
+  AdminUsageOverview,
   PlanningAnalyticsDrafts,
   PlanningAnalyticsFiles,
   PlanningAnalyticsFileStat,
@@ -146,6 +148,8 @@ export class DashboardPageComponent implements OnInit {
   protected readonly dateTo = signal(this.formatInputDate(new Date()));
   protected readonly overview = signal<PlanningAnalyticsOverview | null>(null);
   protected readonly adminOverview = signal<AdminOverview | null>(null);
+  protected readonly usageOverview = signal<AdminUsageOverview | null>(null);
+  protected readonly usageAdmins = signal<AdminUsageAdmin[]>([]);
   protected readonly files = signal<PlanningAnalyticsFiles | null>(null);
   protected readonly drafts = signal<PlanningAnalyticsDrafts | null>(null);
   protected readonly loading = signal(false);
@@ -247,11 +251,19 @@ export class DashboardPageComponent implements OnInit {
       drafts: this.apiService
         .getPlanningAnalyticsDrafts({ ...filters, limit: 20 })
         .pipe(catchError((error: unknown) => this.analyticsFallback(error, endpointErrors))),
+      usageOverview: this.apiService
+        .getAdminUsageOverview(filters)
+        .pipe(catchError(() => of(null))),
+      usageAdmins: this.apiService
+        .listAdminUsageAdmins({ limit: 100, offset: 0 })
+        .pipe(catchError(() => of(null))),
     })
       .pipe(finalize(() => this.loading.set(false)))
-      .subscribe(({ adminOverview, overview, files, drafts }) => {
+      .subscribe(({ adminOverview, overview, files, drafts, usageOverview, usageAdmins }) => {
         this.adminOverview.set(adminOverview as AdminOverview | null);
         this.overview.set(overview as PlanningAnalyticsOverview | null);
+        this.usageOverview.set(this.normalizeUsageOverview(usageOverview));
+        this.usageAdmins.set(this.normalizeUsageAdmins(usageAdmins));
         this.files.set(files as PlanningAnalyticsFiles | null);
         this.drafts.set(drafts as PlanningAnalyticsDrafts | null);
         this.checkedAt.set(new Date());
@@ -282,7 +294,7 @@ export class DashboardPageComponent implements OnInit {
       ['drafts_prepared', this.draftsPrepared()],
       ['drafts_reviewed', this.draftsReviewed()],
       ['drafts_sent', this.draftsSent()],
-      ['active_admins', this.numberFrom(this.overview(), ['active_admins', 'admin_users_total'])],
+      ['active_admins', this.activeDashboardUsers()],
       ['dashboard_users', this.activeDashboardUsers()],
     ];
     const csv = [
@@ -388,12 +400,83 @@ export class DashboardPageComponent implements OnInit {
   private activeDashboardUsers(): number {
     const overview = this.adminOverview();
     const users = overview?.users;
+    const roleTotal = users
+      ? this.numberFrom(users, ['super_admins']) + this.numberFrom(users, ['admins'])
+      : 0;
 
-    if (users) {
-      return this.numberFrom(users, ['super_admins']) + this.numberFrom(users, ['admins']);
+    return this.firstNumber([
+      roleTotal,
+      this.numberFrom(this.adminOverview(), [
+        'active_admins',
+        'admins_total',
+        'users.active_admins',
+        'users.active_admin_count',
+      ]),
+      this.numberFrom(this.usageOverview(), [
+        'active_admins',
+        'active_admin_count',
+        'admins.active',
+        'admins.active_admins',
+        'admins.active_count',
+        'admin_users.active',
+        'totals.active_admins',
+        'summary.active_admins',
+      ]),
+      this.usageAdmins().filter((admin) => this.activeFrom(admin)).length,
+      this.numberFrom(this.overview(), [
+        'active_admins',
+        'admin_users_total',
+        'totals.active_admins',
+        'summary.active_admins',
+      ]),
+    ]);
+  }
+
+  private normalizeUsageOverview(source: unknown): AdminUsageOverview | null {
+    if (!source || typeof source !== 'object') {
+      return null;
     }
 
-    return this.numberFrom(this.overview(), ['active_admins', 'admin_users_total']);
+    const record = source as Record<string, unknown>;
+
+    for (const key of ['overview', 'stats', 'analytics', 'data']) {
+      const value = record[key];
+
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        return value as AdminUsageOverview;
+      }
+    }
+
+    return record as AdminUsageOverview;
+  }
+
+  private normalizeUsageAdmins(source: unknown): AdminUsageAdmin[] {
+    return this.collectionFrom<AdminUsageAdmin>(source, [
+      'items',
+      'admins',
+      'users',
+      'data',
+      'results',
+      'records',
+    ]);
+  }
+
+  private activeFrom(source: unknown): boolean {
+    if (!source || typeof source !== 'object') {
+      return false;
+    }
+
+    const value = this.valueAt(source, 'is_active') ?? this.valueAt(source, 'active');
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      return !['false', 'inactive', 'disabled', '0'].includes(value.toLowerCase());
+    }
+
+    return true;
   }
 
   private draftStatusDistribution(): DistributionItem[] {
@@ -438,6 +521,10 @@ export class DashboardPageComponent implements OnInit {
   }
 
   private collectionFrom<T>(source: unknown, keys: string[]): T[] {
+    if (Array.isArray(source)) {
+      return source as T[];
+    }
+
     if (!source || typeof source !== 'object') {
       return [];
     }

@@ -135,7 +135,7 @@
 .usage-metrics {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 }
 
 .usage-metric,
@@ -439,10 +439,6 @@
 }
 
 @media (max-width: 1250px) {
-  .usage-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .usage-layout {
     grid-template-columns: 1fr;
   }

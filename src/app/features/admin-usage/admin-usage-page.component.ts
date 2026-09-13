@@ -79,6 +79,7 @@ const COPY = {
     },
     metrics: {
       actions: 'Total actions',
+      activeAdmins: 'Active admins',
       logins: 'Logins',
       changes: 'Changes',
       deletes: 'Deletes',
@@ -145,6 +146,7 @@ const COPY = {
     },
     metrics: {
       actions: 'Actions totales',
+      activeAdmins: 'Admins actifs',
       logins: 'Connexions',
       changes: 'Modifications',
       deletes: 'Suppressions',
@@ -229,44 +231,43 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
   protected readonly metrics = computed<UsageMetric[]>(() => [
     {
       label: this.copy().metrics.actions,
-      value: this.formatNumber(
-        this.numberFrom(this.overview(), ['total_actions', 'actions_total']),
-      ),
+      value: this.formatNumber(this.totalActionCount()),
       tone: 'blue',
       icon: 'activity',
     },
     {
+      label: this.copy().metrics.activeAdmins,
+      value: this.formatNumber(this.activeAdminCount()),
+      tone: 'blue',
+      icon: 'login',
+    },
+    {
       label: this.copy().metrics.logins,
-      value: this.formatNumber(this.numberFrom(this.overview(), ['login_count', 'logins'])),
+      value: this.formatNumber(this.loginCount()),
       tone: 'green',
       icon: 'login',
     },
     {
       label: this.copy().metrics.changes,
-      value: this.formatNumber(
-        this.numberFrom(this.overview(), ['create_count']) +
-          this.numberFrom(this.overview(), ['update_count']),
-      ),
+      value: this.formatNumber(this.changeCount()),
       tone: 'amber',
       icon: 'changes',
     },
     {
       label: this.copy().metrics.deletes,
-      value: this.formatNumber(this.numberFrom(this.overview(), ['delete_count', 'deletes'])),
+      value: this.formatNumber(this.deleteCount()),
       tone: 'red',
       icon: 'changes',
     },
     {
       label: this.copy().metrics.health,
-      value: this.formatNumber(
-        this.numberFrom(this.overview(), ['health_check_count', 'health_checks']),
-      ),
+      value: this.formatNumber(this.healthCheckCount()),
       tone: 'green',
       icon: 'health',
     },
     {
       label: this.copy().metrics.failed,
-      value: this.formatNumber(this.numberFrom(this.overview(), ['failed_actions', 'failed'])),
+      value: this.formatNumber(this.failedActionCount()),
       tone: 'red',
       icon: 'activity',
     },
@@ -751,6 +752,151 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
     }
 
     return true;
+  }
+
+  private totalActionCount(): number {
+    return Math.max(
+      this.numberFrom(this.overview(), [
+        'total_actions',
+        'actions_total',
+        'actions.count',
+        'actions.total',
+        'totals.actions',
+        'totals.total_actions',
+        'summary.actions',
+        'summary.total_actions',
+      ]),
+      this.total(),
+      this.actions().length,
+    );
+  }
+
+  private activeAdminCount(): number {
+    return Math.max(
+      this.numberFrom(this.overview(), [
+        'active_admins',
+        'active_admin_count',
+        'admins.active',
+        'admins.active_admins',
+        'admins.active_count',
+        'admin_users.active',
+        'totals.active_admins',
+        'summary.active_admins',
+      ]),
+      this.admins().filter((admin) => admin.is_active).length,
+    );
+  }
+
+  private loginCount(): number {
+    return Math.max(
+      this.numberFrom(this.overview(), [
+        'login_count',
+        'logins',
+        'login.total',
+        'actions.login',
+        'by_action.login',
+        'totals.login_count',
+        'totals.logins',
+        'summary.login_count',
+        'summary.logins',
+      ]),
+      this.countActions(['login', 'log_in', 'signin', 'sign_in', 'auth']),
+    );
+  }
+
+  private changeCount(): number {
+    return Math.max(
+      this.numberFrom(this.overview(), [
+        'change_count',
+        'changes',
+        'write_count',
+        'totals.changes',
+        'summary.changes',
+      ]) +
+        this.numberFrom(this.overview(), [
+          'create_count',
+          'created_count',
+          'actions.create',
+          'by_action.create',
+          'totals.create_count',
+          'summary.create_count',
+        ]) +
+        this.numberFrom(this.overview(), [
+          'update_count',
+          'updated_count',
+          'modify_count',
+          'actions.update',
+          'by_action.update',
+          'totals.update_count',
+          'summary.update_count',
+        ]),
+      this.countActions(['create', 'update', 'patch', 'edit', 'modify']),
+    );
+  }
+
+  private deleteCount(): number {
+    return Math.max(
+      this.numberFrom(this.overview(), [
+        'delete_count',
+        'deleted_count',
+        'deletes',
+        'actions.delete',
+        'by_action.delete',
+        'totals.delete_count',
+        'totals.deletes',
+        'summary.delete_count',
+        'summary.deletes',
+      ]),
+      this.countActions(['delete', 'remove']),
+    );
+  }
+
+  private healthCheckCount(): number {
+    return Math.max(
+      this.numberFrom(this.overview(), [
+        'health_check_count',
+        'health_checks',
+        'health.total',
+        'actions.health',
+        'actions.health_check',
+        'by_action.health',
+        'by_action.health_check',
+        'totals.health_check_count',
+        'totals.health_checks',
+        'summary.health_check_count',
+        'summary.health_checks',
+      ]),
+      this.countActions(['health']),
+    );
+  }
+
+  private failedActionCount(): number {
+    return Math.max(
+      this.numberFrom(this.overview(), [
+        'failed_actions',
+        'failed',
+        'failure_count',
+        'errors',
+        'actions.failed',
+        'by_status.failed',
+        'by_status.error',
+        'totals.failed_actions',
+        'summary.failed_actions',
+      ]),
+      this.actions().filter((action) =>
+        ['failed', 'failure', 'error'].includes(this.actionStatus(action).toLowerCase()),
+      ).length,
+    );
+  }
+
+  private countActions(matchers: string[]): number {
+    return this.actions().filter((action) => {
+      const value = `${action.action} ${action.summary ?? ''} ${action.resource_type ?? ''}`
+        .toLowerCase()
+        .replace(/[-\s]/g, '_');
+
+      return matchers.some((matcher) => value.includes(matcher));
+    }).length;
   }
 
   private numberFrom(source: unknown, paths: string[]): number {
