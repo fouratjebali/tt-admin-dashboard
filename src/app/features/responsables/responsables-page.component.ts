@@ -15,7 +15,7 @@ import {
   LucideUsersRound,
   LucideX,
 } from '@lucide/angular';
-import { catchError, finalize, forkJoin, map, of, switchMap } from 'rxjs';
+import { finalize, forkJoin, map, of, switchMap } from 'rxjs';
 
 import {
   PaginatedResponse,
@@ -86,7 +86,7 @@ const COPY = {
       total: 'Total responsables',
       residences: 'Residences',
       functions: 'Functions',
-      pages: 'Directory pages',
+      page: 'Loaded page',
     },
     errors: {
       load: 'Unable to load responsables from the planning API.',
@@ -148,7 +148,7 @@ const COPY = {
       total: 'Total responsables',
       residences: 'Residences',
       functions: 'Fonctions',
-      pages: 'Pages repertoire',
+      page: 'Page chargee',
     },
     errors: {
       load: "Impossible de charger les responsables depuis l'API planning.",
@@ -259,10 +259,8 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
         tone: 'accent' as StatTone,
       },
       {
-        label: this.copy().stats.pages,
-        value: this.statsLoading()
-          ? '-'
-          : Math.ceil((globalTotal || responsables.length) / PAGE_SIZE),
+        label: this.copy().stats.page,
+        value: this.responsables().length,
         tone: 'warning' as StatTone,
       },
     ];
@@ -334,19 +332,19 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
       .pipe(
         switchMap((response) => {
           const firstPage = this.normalizeResponsablesResponse(response);
+          const effectiveLimit = this.effectiveStatsLimit(firstPage);
           const requests = [];
 
           for (
-            let currentOffset = STATS_PAGE_SIZE;
+            let currentOffset = firstPage.offset + effectiveLimit;
             currentOffset < firstPage.total;
-            currentOffset += STATS_PAGE_SIZE
+            currentOffset += effectiveLimit
           ) {
             requests.push(
               this.apiService
-                .listResponsables({ limit: STATS_PAGE_SIZE, offset: currentOffset })
+                .listResponsables({ limit: effectiveLimit, offset: currentOffset })
                 .pipe(
                   map((pageResponse) => this.normalizeResponsablesResponse(pageResponse).items),
-                  catchError(() => of([])),
                 ),
             );
           }
@@ -622,6 +620,8 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
   ): {
     items: ResponsableContact[];
     total: number;
+    limit: number;
+    offset: number;
   } {
     const items = this.responsableArrayFrom(response).map((responsable) =>
       this.normalizeResponsable(responsable),
@@ -630,6 +630,8 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
     return {
       items,
       total: this.totalFrom(response, items.length),
+      limit: this.limitFrom(response, items.length),
+      offset: this.offsetFrom(response),
     };
   }
 
@@ -724,6 +726,31 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
         'totalCount',
       ]) ?? fallback
     );
+  }
+
+  private limitFrom(response: unknown, fallback: number): number {
+    const record = this.recordFrom(response);
+    const limit = this.numberFrom(record, ['limit', 'page_size', 'pageSize']);
+
+    if (limit && limit > 0) {
+      return limit;
+    }
+
+    return fallback > 0 ? fallback : STATS_PAGE_SIZE;
+  }
+
+  private offsetFrom(response: unknown): number {
+    return this.numberFrom(this.recordFrom(response), ['offset', 'skip']) ?? 0;
+  }
+
+  private effectiveStatsLimit(page: { items: ResponsableContact[]; limit: number }): number {
+    if (page.limit > 0 && page.limit < STATS_PAGE_SIZE) {
+      return page.limit;
+    }
+
+    return page.items.length > 0 && page.items.length < STATS_PAGE_SIZE
+      ? page.items.length
+      : STATS_PAGE_SIZE;
   }
 
   private arrayFrom(record: Record<string, unknown> | null, keys: string[]): unknown[] {
