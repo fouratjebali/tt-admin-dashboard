@@ -6,7 +6,7 @@ import { AdminIdentity, AdminRole, BackendSession } from '../models/backend-api.
 import { ApiService } from './api.service';
 
 const TOKEN_KEY = 'tt_admin_session_token';
-const DASHBOARD_ROLES: AdminRole[] = ['admin', 'reviewer', 'viewer'];
+const DASHBOARD_ROLES: AdminRole[] = ['super_admin', 'admin'];
 
 export class DashboardAccessError extends Error {
   constructor() {

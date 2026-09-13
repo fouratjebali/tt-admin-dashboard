@@ -1,0 +1,315 @@
+<section class="usage-page">
+  <header class="usage-heading">
+    <div>
+      <span class="usage-heading__eyebrow">
+        <svg lucideShieldCheck size="15"></svg>
+        {{ copy().eyebrow }}
+      </span>
+      <h1>{{ copy().title }}</h1>
+      <p>{{ copy().body }}</p>
+    </div>
+
+    <div class="usage-heading__actions">
+      <label class="usage-date">
+        <span>{{ copy().from }}</span>
+        <input type="date" [value]="dateFrom()" (change)="updateDateFrom($event)" />
+      </label>
+      <label class="usage-date">
+        <span>{{ copy().to }}</span>
+        <input type="date" [value]="dateTo()" (change)="updateDateTo($event)" />
+      </label>
+      <button class="usage-button" type="button" [disabled]="loading()" (click)="loadUsage()">
+        <svg lucideRefreshCw size="16"></svg>
+        {{ copy().refresh }}
+      </button>
+    </div>
+  </header>
+
+  @if (error()) {
+    <div class="usage-alert" role="alert">
+      <svg lucideCircleAlert size="16"></svg>
+      {{ error() }}
+    </div>
+  } @else if (warning()) {
+    <div class="usage-alert usage-alert--warning" role="status">
+      <svg lucideCircleAlert size="16"></svg>
+      {{ warning() }}
+    </div>
+  }
+
+  <div class="usage-metrics">
+    @for (metric of metrics(); track metric.label) {
+      <article class="usage-metric" [class]="'usage-metric usage-metric--' + metric.tone">
+        <span class="usage-metric__icon">
+          @switch (metric.icon) {
+            @case ('login') {
+              <svg lucideShieldCheck size="18"></svg>
+            }
+            @case ('changes') {
+              <svg lucideUserCog size="18"></svg>
+            }
+            @case ('health') {
+              <svg lucideClock size="18"></svg>
+            }
+            @default {
+              <svg lucideActivity size="18"></svg>
+            }
+          }
+        </span>
+        <span>{{ metric.label }}</span>
+        <strong>{{ metric.value }}</strong>
+      </article>
+    }
+  </div>
+
+  <div class="usage-layout">
+    <section class="usage-panel usage-panel--trace">
+      <div class="usage-panel__header">
+        <div>
+          <h2>{{ copy().traceTitle }}</h2>
+          <span>{{ copy().overviewTitle }}</span>
+        </div>
+        @if (loading()) {
+          <small class="usage-loading"><i></i>{{ copy().loading }}</small>
+        }
+      </div>
+
+      <div class="usage-toolbar">
+        <label class="usage-search">
+          <svg lucideSearch size="16"></svg>
+          <input
+            type="search"
+            [value]="searchTerm()"
+            [placeholder]="copy().search"
+            (input)="updateSearch($event)"
+          />
+        </label>
+
+        <label>
+          <span>{{ copy().action }}</span>
+          <select [value]="actionFilter()" (change)="updateActionFilter($event)">
+            @for (option of actionOptions; track option) {
+              <option [value]="option">{{ option === 'all' ? copy().all : option }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>{{ copy().status }}</span>
+          <select [value]="statusFilter()" (change)="updateStatusFilter($event)">
+            @for (option of statusOptions; track option) {
+              <option [value]="option">
+                @switch (option) {
+                  @case ('all') {
+                    {{ copy().all }}
+                  }
+                  @case ('failed') {
+                    {{ copy().failed }}
+                  }
+                  @default {
+                    {{ copy().successful }}
+                  }
+                }
+              </option>
+            }
+          </select>
+        </label>
+
+        <label>
+          <span>{{ copy().admin }}</span>
+          <select [value]="selectedAdminId()" (change)="updateAdminFilter($event)">
+            <option value="all">{{ copy().all }}</option>
+            @for (admin of admins(); track adminId(admin)) {
+              <option [value]="adminId(admin)">{{ adminName(admin) }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <div class="usage-table" role="table">
+        <div class="usage-table__head" role="row">
+          <span role="columnheader">{{ copy().table.admin }}</span>
+          <span role="columnheader">{{ copy().table.action }}</span>
+          <span role="columnheader">{{ copy().table.resource }}</span>
+          <span role="columnheader">{{ copy().table.status }}</span>
+          <span role="columnheader">{{ copy().table.date }}</span>
+          <span role="columnheader">{{ copy().table.details }}</span>
+        </div>
+
+        @if (loading()) {
+          <div class="usage-empty">
+            <span class="usage-spinner"></span>
+            {{ copy().loading }}
+          </div>
+        } @else if (actions().length === 0) {
+          <div class="usage-empty">
+            <svg lucideActivity size="24"></svg>
+            <strong>{{ copy().emptyTitle }}</strong>
+            <span>{{ copy().emptyBody }}</span>
+          </div>
+        } @else {
+          @for (action of actions(); track actionId(action)) {
+            <div class="usage-table__row" role="row">
+              <span role="cell">{{ actionActor(action) }}</span>
+              <span role="cell">
+                <mark>{{ actionSummary(action) }}</mark>
+              </span>
+              <span role="cell">{{ actionResource(action) }}</span>
+              <span role="cell">
+                <mark
+                  class="usage-status"
+                  [class.usage-status--failed]="actionStatus(action) === 'failed'"
+                >
+                  {{ actionStatus(action) }}
+                </mark>
+              </span>
+              <time role="cell">{{ formatDate(action.created_at) }}</time>
+              <span role="cell">
+                <button class="usage-icon-button" type="button" (click)="openAction(action)">
+                  <svg lucideEye size="16"></svg>
+                  <span>{{ copy().view }}</span>
+                </button>
+              </span>
+            </div>
+          }
+        }
+      </div>
+
+      <footer class="usage-pagination">
+        <span
+          >{{ copy().range }} {{ pageStart() }}-{{ pageEnd() }} {{ copy().of }} {{ total() }}</span
+        >
+        <div>
+          <button
+            type="button"
+            [disabled]="!canGoPrevious()"
+            [attr.aria-label]="copy().previous"
+            (click)="previousPage()"
+          >
+            <svg lucideChevronLeft size="16"></svg>
+          </button>
+          <button
+            type="button"
+            [disabled]="!canGoNext()"
+            [attr.aria-label]="copy().next"
+            (click)="nextPage()"
+          >
+            <svg lucideChevronRight size="16"></svg>
+          </button>
+        </div>
+      </footer>
+    </section>
+
+    <aside class="usage-panel usage-panel--admins">
+      <div class="usage-panel__header">
+        <div>
+          <h2>{{ copy().adminsTitle }}</h2>
+          <span>{{ admins().length }} {{ copy().admin }}</span>
+        </div>
+      </div>
+
+      <div class="usage-admin-list">
+        @for (admin of admins(); track adminId(admin)) {
+          <button
+            class="usage-admin"
+            type="button"
+            [class.usage-admin--selected]="selectedAdminId() === adminId(admin)"
+            [disabled]="loading()"
+            (click)="selectAdmin(admin)"
+          >
+            <span class="usage-admin__avatar">{{ adminInitials(admin) }}</span>
+            <span>
+              <strong>{{ adminName(admin) }}</strong>
+              <small>{{ admin.email }}</small>
+            </span>
+            <mark>{{ roleLabel(admin.role) }}</mark>
+            <b>{{ adminActions(admin) }}</b>
+          </button>
+        } @empty {
+          <div class="usage-empty usage-empty--compact">{{ copy().noData }}</div>
+        }
+      </div>
+
+      <div class="usage-admin-overview">
+        <h3>{{ copy().selectedTitle }}</h3>
+        @if (selectedAdmin()) {
+          <strong>{{ adminName(selectedAdmin()!) }}</strong>
+          <span>{{ selectedAdmin()?.email }}</span>
+          <div>
+            <small>{{ copy().metrics.actions }}</small>
+            <b>{{ selectedAdminMetric(['total_actions', 'actions_count']) }}</b>
+          </div>
+          <div>
+            <small>{{ copy().metrics.logins }}</small>
+            <b>{{ selectedAdminMetric(['login_count', 'logins']) }}</b>
+          </div>
+          <div>
+            <small>{{ copy().metrics.failed }}</small>
+            <b>{{ selectedAdminMetric(['failed_actions', 'failed']) }}</b>
+          </div>
+        } @else {
+          <p>{{ copy().noAdminSelected }}</p>
+        }
+      </div>
+    </aside>
+  </div>
+
+  @if (selectedAction(); as action) {
+    <button
+      class="usage-drawer-backdrop"
+      type="button"
+      [attr.aria-label]="copy().close"
+      (click)="closeAction()"
+    ></button>
+    <aside class="usage-drawer" aria-live="polite">
+      <header>
+        <div>
+          <span>{{ copy().details.title }}</span>
+          <h2>{{ actionSummary(action) }}</h2>
+        </div>
+        <button type="button" [attr.aria-label]="copy().close" (click)="closeAction()">
+          <svg lucideX size="18"></svg>
+        </button>
+      </header>
+
+      @if (loadingDetail()) {
+        <div class="usage-empty usage-empty--compact">
+          <span class="usage-spinner"></span>
+          {{ copy().loadingDetail }}
+        </div>
+      }
+
+      <dl>
+        <div>
+          <dt>{{ copy().details.actor }}</dt>
+          <dd>{{ actionActor(action) }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy().details.resource }}</dt>
+          <dd>{{ actionResource(action) }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy().status }}</dt>
+          <dd>{{ actionStatus(action) }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy().details.request }}</dt>
+          <dd>{{ action.request_method || '-' }} {{ action.request_path || '' }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy().details.ip }}</dt>
+          <dd>{{ action.ip_address || '-' }}</dd>
+        </div>
+        <div>
+          <dt>{{ copy().table.date }}</dt>
+          <dd>{{ formatDate(action.created_at) }}</dd>
+        </div>
+      </dl>
+
+      <section>
+        <h3>{{ copy().details.metadata }}</h3>
+        <pre>{{ metadataText(action) }}</pre>
+      </section>
+    </aside>
+  }
+</section>

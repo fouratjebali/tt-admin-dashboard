@@ -17,32 +17,41 @@ export const routes: Routes = [
     path: '',
     component: DashboardPageComponent,
     canActivate: [authGuard],
-    data: { roles: ['admin', 'reviewer', 'viewer'] },
+    data: { roles: ['super_admin', 'admin'] },
     pathMatch: 'full',
   },
   {
     path: 'users',
     component: UsersPageComponent,
     canActivate: [authGuard],
-    data: { roles: ['admin'] },
+    data: { roles: ['super_admin'] },
   },
   {
     path: 'health',
     component: HealthPageComponent,
     canActivate: [authGuard],
-    data: { roles: ['admin', 'reviewer', 'viewer'] },
+    data: { roles: ['super_admin', 'admin'] },
   },
   {
     path: 'settings',
     component: SettingsPageComponent,
     canActivate: [authGuard],
-    data: { roles: ['admin'] },
+    data: { roles: ['super_admin'] },
   },
   {
     path: 'audit',
     component: AuditPageComponent,
     canActivate: [authGuard],
-    data: { roles: ['admin'] },
+    data: { roles: ['super_admin'] },
+  },
+  {
+    path: 'admin-usage',
+    loadComponent: () =>
+      import('./features/admin-usage/admin-usage-page.component').then(
+        (component) => component.AdminUsagePageComponent,
+      ),
+    canActivate: [authGuard],
+    data: { roles: ['super_admin'] },
   },
   {
     path: 'responsables',
@@ -51,6 +60,6 @@ export const routes: Routes = [
         (component) => component.ResponsablesPageComponent,
       ),
     canActivate: [authGuard],
-    data: { roles: ['admin'] },
+    data: { roles: ['super_admin', 'admin'] },
   },
 ];

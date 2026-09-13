@@ -1,4 +1,4 @@
-export type AdminRole = 'admin' | 'reviewer' | 'viewer' | 'user';
+export type AdminRole = 'super_admin' | 'admin' | 'user';
 
 export interface AdminLoginRequest {
   username: string;
@@ -50,9 +50,8 @@ export interface AdminOverview {
     total?: number;
     active?: number;
     inactive?: number;
+    super_admins?: number;
     admins?: number;
-    reviewers?: number;
-    viewers?: number;
     regular_users?: number;
   };
   email?: {
@@ -124,6 +123,86 @@ export interface AuditLog {
   status?: string;
   metadata?: Record<string, unknown>;
   created_at: string;
+}
+
+export interface AdminUsageAdminSummary {
+  id?: string;
+  user_id?: string;
+  username?: string;
+  email?: string;
+  display_name?: string;
+  full_name?: string;
+  name?: string;
+  role?: AdminRole;
+  actions?: number;
+  total_actions?: number;
+  login_count?: number;
+  create_count?: number;
+  update_count?: number;
+  delete_count?: number;
+  health_check_count?: number;
+  failed_actions?: number;
+  last_activity_at?: string;
+  [key: string]: unknown;
+}
+
+export interface AdminUsageOverview {
+  generated_at?: string;
+  total_actions?: number;
+  login_count?: number;
+  create_count?: number;
+  update_count?: number;
+  delete_count?: number;
+  health_check_count?: number;
+  failed_actions?: number;
+  active_admins?: number;
+  most_active_admin?: AdminUsageAdminSummary;
+  by_action?: Record<string, number> | Record<string, unknown>[];
+  by_status?: Record<string, number> | Record<string, unknown>[];
+  important_actions?: number;
+  [key: string]: unknown;
+}
+
+export interface AdminUsageAction extends AuditLog {
+  admin_id?: string;
+  admin_email?: string;
+  admin_name?: string;
+  summary?: string;
+  ip_address?: string;
+  user_agent?: string;
+  request_method?: string;
+  request_path?: string;
+  [key: string]: unknown;
+}
+
+export interface AdminUsageAdmin {
+  id?: string;
+  user_id?: string;
+  username?: string;
+  email: string;
+  display_name?: string;
+  full_name?: string;
+  name?: string;
+  role: AdminRole;
+  is_active: boolean;
+  last_login_at?: string;
+  actions_count?: number;
+  created_at?: string;
+  updated_at?: string;
+  [key: string]: unknown;
+}
+
+export interface AdminAccountPayload {
+  username?: string;
+  password?: string;
+  email?: string;
+  display_name?: string;
+  role?: AdminRole;
+  is_active?: boolean;
+}
+
+export interface AdminPasswordPayload {
+  password: string;
 }
 
 export interface AdminHealthService {

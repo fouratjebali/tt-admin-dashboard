@@ -8,10 +8,15 @@ import {
   AdminHealth,
   AdminOverview,
   AdminRole,
+  AdminAccountPayload,
   AdminDashboardPolicies,
+  AdminPasswordPayload,
   AdminSettings,
   AdminSettingsSupervision,
   AdminSettingsSystem,
+  AdminUsageAction,
+  AdminUsageAdmin,
+  AdminUsageOverview,
   AdminUser,
   AuditLog,
   AutomationJob,
@@ -95,6 +100,65 @@ export class ApiService {
 
   getAuditLog(logId: string): Observable<AuditLog> {
     return this.http.get<AuditLog>(this.adminUrl(`/audit-logs/${logId}`));
+  }
+
+  getAdminUsageOverview(filters?: ApiFilters): Observable<AdminUsageOverview> {
+    return this.http.get<AdminUsageOverview>(this.adminUrl('/usage/overview'), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  listAdminUsageActions(filters?: ApiFilters): Observable<PaginatedResponse<AdminUsageAction>> {
+    return this.http.get<PaginatedResponse<AdminUsageAction>>(this.adminUrl('/usage/actions'), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  getAdminUsageAction(logId: string): Observable<AdminUsageAction> {
+    return this.http.get<AdminUsageAction>(this.adminUrl(`/usage/actions/${logId}`));
+  }
+
+  listAdminUsageAdmins(filters?: ApiFilters): Observable<PaginatedResponse<AdminUsageAdmin>> {
+    return this.http.get<PaginatedResponse<AdminUsageAdmin>>(this.adminUrl('/usage/admins'), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  getAdminUsageAdminOverview(
+    adminId: string,
+    filters?: ApiFilters,
+  ): Observable<AdminUsageOverview> {
+    return this.http.get<AdminUsageOverview>(this.adminUrl(`/usage/admins/${adminId}/overview`), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  listAdminAccounts(filters?: ApiFilters): Observable<PaginatedResponse<AdminUsageAdmin>> {
+    return this.http.get<PaginatedResponse<AdminUsageAdmin>>(this.adminUrl('/admins'), {
+      params: this.buildParams(filters),
+    });
+  }
+
+  createAdminAccount(payload: AdminAccountPayload): Observable<AdminUsageAdmin> {
+    return this.http.post<AdminUsageAdmin>(this.adminUrl('/admins'), payload);
+  }
+
+  getAdminAccount(adminId: string): Observable<AdminUsageAdmin> {
+    return this.http.get<AdminUsageAdmin>(this.adminUrl(`/admins/${adminId}`));
+  }
+
+  updateAdminAccount(adminId: string, payload: AdminAccountPayload): Observable<AdminUsageAdmin> {
+    return this.http.patch<AdminUsageAdmin>(this.adminUrl(`/admins/${adminId}`), payload);
+  }
+
+  updateAdminAccountActive(adminId: string, isActive: boolean): Observable<AdminUsageAdmin> {
+    return this.http.patch<AdminUsageAdmin>(this.adminUrl(`/admins/${adminId}/active`), {
+      is_active: isActive,
+    });
+  }
+
+  updateAdminAccountPassword(adminId: string, payload: AdminPasswordPayload): Observable<void> {
+    return this.http.patch<void>(this.adminUrl(`/admins/${adminId}/password`), payload);
   }
 
   previewPlanningImport(files: File[]): Observable<PlanningImport> {

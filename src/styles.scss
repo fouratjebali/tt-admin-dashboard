@@ -395,3 +395,93 @@ a {
   gap: 8px;
   justify-content: flex-end;
 }
+
+.usage-drawer-backdrop {
+  background: color-mix(in srgb, var(--tt-ink) 28%, transparent);
+  border: 0;
+  inset: 0;
+  padding: 0;
+  position: fixed;
+  z-index: 40;
+}
+
+.usage-drawer {
+  background: var(--tt-card);
+  border-left: 1px solid var(--tt-line);
+  bottom: 0;
+  box-shadow: -24px 0 60px rgba(15, 23, 42, 0.2);
+  display: grid;
+  gap: 16px;
+  max-width: 440px;
+  overflow: auto;
+  padding: 20px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: min(440px, 100vw);
+  z-index: 41;
+}
+
+.usage-drawer header {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.usage-drawer dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.usage-drawer dl div {
+  border-bottom: 1px solid var(--tt-line);
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+}
+
+.usage-drawer dt,
+.usage-drawer h3 {
+  color: var(--tt-ink-faint);
+  font-size: 10px;
+  font-weight: 850;
+  margin: 0;
+}
+
+.usage-drawer dd {
+  color: var(--tt-ink);
+  font-size: 12px;
+  font-weight: 750;
+  margin: 0;
+}
+
+.usage-drawer pre {
+  background: var(--tt-card-muted);
+  border: 1px solid var(--tt-line);
+  border-radius: 8px;
+  color: var(--tt-ink-soft);
+  font-size: 11px;
+  margin: 8px 0 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.usage-empty {
+  align-items: center;
+  border: 1px dashed var(--tt-line);
+  border-radius: 8px;
+  color: var(--tt-ink-faint);
+  display: grid;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 8px;
+  justify-items: center;
+  min-height: 150px;
+  padding: 18px;
+}
+
+.usage-empty--compact {
+  min-height: 80px;
+}

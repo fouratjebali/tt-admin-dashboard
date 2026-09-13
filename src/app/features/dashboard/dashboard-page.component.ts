@@ -4,7 +4,6 @@ import {
   LucideCalendarDays,
   LucideChartColumnIncreasing,
   LucideCircleAlert,
-  LucideCircleCheckBig,
   LucideClock,
   LucideDownload,
   LucideFileText,
@@ -19,22 +18,16 @@ import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import {
   AdminOverview,
-  PaginatedResponse,
   PlanningAnalyticsDrafts,
   PlanningAnalyticsFiles,
   PlanningAnalyticsFileStat,
   PlanningAnalyticsOverview,
-  PlanningAnalyticsUser,
 } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
 type MetricTone = 'teal' | 'amber' | 'sage' | 'blue';
-type AnalyticsUsersResponse =
-  | PaginatedResponse<PlanningAnalyticsUser>
-  | PlanningAnalyticsUser[]
-  | null;
 
 interface DistributionItem {
   label: string;
@@ -75,26 +68,11 @@ const DASHBOARD_COPY = {
     },
     filesTitle: 'Recent treated files',
     draftsTitle: 'Draft distribution',
-    usersTitle: 'Admin usage',
-    statusTitle: 'Analytics status',
     table: {
       file: 'File',
       status: 'Status',
       rows: 'Rows',
       date: 'Date',
-      user: 'Admin user',
-      prepared: 'Prepared',
-      reviewed: 'Reviewed',
-      sent: 'Sent',
-      total: 'Total actions',
-    },
-    status: {
-      overview: 'Overview analytics',
-      files: 'File analytics',
-      drafts: 'Draft analytics',
-      users: 'Admin usage analytics',
-      available: 'Available',
-      unavailable: 'Unavailable',
     },
   },
   fr: {
@@ -130,26 +108,11 @@ const DASHBOARD_COPY = {
     },
     filesTitle: 'Fichiers traites recents',
     draftsTitle: 'Distribution drafts',
-    usersTitle: 'Usage admin',
-    statusTitle: 'Etat analytics',
     table: {
       file: 'Fichier',
       status: 'Statut',
       rows: 'Lignes',
       date: 'Date',
-      user: 'Admin user',
-      prepared: 'Prepares',
-      reviewed: 'Revus',
-      sent: 'Envoyes',
-      total: 'Total actions',
-    },
-    status: {
-      overview: 'Analytics overview',
-      files: 'Analytics fichiers',
-      drafts: 'Analytics drafts',
-      users: 'Analytics usage admin',
-      available: 'Disponible',
-      unavailable: 'Indisponible',
     },
   },
 };
@@ -161,7 +124,6 @@ const DASHBOARD_COPY = {
     LucideCalendarDays,
     LucideChartColumnIncreasing,
     LucideCircleAlert,
-    LucideCircleCheckBig,
     LucideClock,
     LucideDownload,
     LucideFileText,
@@ -186,7 +148,6 @@ export class DashboardPageComponent implements OnInit {
   protected readonly adminOverview = signal<AdminOverview | null>(null);
   protected readonly files = signal<PlanningAnalyticsFiles | null>(null);
   protected readonly drafts = signal<PlanningAnalyticsDrafts | null>(null);
-  protected readonly users = signal<PlanningAnalyticsUser[]>([]);
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly warning = signal('');
@@ -258,29 +219,6 @@ export class DashboardPageComponent implements OnInit {
 
   protected readonly draftDistribution = computed(() => this.draftStatusDistribution().slice(0, 5));
 
-  protected readonly topUsers = computed(() =>
-    [...this.users()].sort((a, b) => this.userActions(b) - this.userActions(a)).slice(0, 5),
-  );
-
-  protected readonly statusRows = computed(() => [
-    {
-      label: this.copy().status.overview,
-      available: Boolean(this.adminOverview() || this.overview()),
-    },
-    {
-      label: this.copy().status.files,
-      available: Boolean(this.files()),
-    },
-    {
-      label: this.copy().status.drafts,
-      available: Boolean(this.drafts()),
-    },
-    {
-      label: this.copy().status.users,
-      available: this.users().length > 0,
-    },
-  ]);
-
   ngOnInit(): void {
     this.loadAnalytics();
   }
@@ -309,20 +247,16 @@ export class DashboardPageComponent implements OnInit {
       drafts: this.apiService
         .getPlanningAnalyticsDrafts({ ...filters, limit: 20 })
         .pipe(catchError((error: unknown) => this.analyticsFallback(error, endpointErrors))),
-      users: this.apiService
-        .getPlanningAnalyticsUsers({ ...filters, limit: 50, offset: 0 })
-        .pipe(catchError((error: unknown) => this.analyticsFallback(error, endpointErrors))),
     })
       .pipe(finalize(() => this.loading.set(false)))
-      .subscribe(({ adminOverview, overview, files, drafts, users }) => {
+      .subscribe(({ adminOverview, overview, files, drafts }) => {
         this.adminOverview.set(adminOverview as AdminOverview | null);
         this.overview.set(overview as PlanningAnalyticsOverview | null);
         this.files.set(files as PlanningAnalyticsFiles | null);
         this.drafts.set(drafts as PlanningAnalyticsDrafts | null);
-        this.users.set(this.normalizeUsers(users as AnalyticsUsersResponse));
         this.checkedAt.set(new Date());
 
-        if (!adminOverview && !overview && !files && !drafts && !users) {
+        if (!adminOverview && !overview && !files && !drafts) {
           this.error.set(endpointErrors[0] ?? this.copy().error);
         } else if (endpointErrors.length > 0) {
           this.warning.set(this.copy().partial);
@@ -386,51 +320,6 @@ export class DashboardPageComponent implements OnInit {
     ]);
 
     return value ? this.formatDisplayDate(value) : '-';
-  }
-
-  protected userName(user: PlanningAnalyticsUser): string {
-    return (
-      user.full_name ??
-      user.name ??
-      user.email ??
-      user.actor_email ??
-      user.user_id ??
-      this.copy().noData
-    );
-  }
-
-  protected userPrepared(user: PlanningAnalyticsUser): string {
-    return this.formatNumber(this.numberFrom(user, ['drafts_prepared', 'drafts_generated']));
-  }
-
-  protected userReviewed(user: PlanningAnalyticsUser): string {
-    return this.formatNumber(this.numberFrom(user, ['drafts_reviewed']));
-  }
-
-  protected userSent(user: PlanningAnalyticsUser): string {
-    return this.formatNumber(this.numberFrom(user, ['drafts_sent']));
-  }
-
-  protected userActions(user: PlanningAnalyticsUser): number {
-    const explicitTotal = this.numberFrom(user, [
-      'total_planning_actions',
-      'planning_actions_total',
-    ]);
-
-    if (explicitTotal > 0) {
-      return explicitTotal;
-    }
-
-    return (
-      this.numberFrom(user, ['imports_created']) +
-      this.numberFrom(user, ['drafts_prepared', 'drafts_generated']) +
-      this.numberFrom(user, ['drafts_reviewed']) +
-      this.numberFrom(user, ['drafts_sent'])
-    );
-  }
-
-  protected statusLabel(available: boolean): string {
-    return available ? this.copy().status.available : this.copy().status.unavailable;
   }
 
   private importsTotal(): number {
@@ -501,28 +390,10 @@ export class DashboardPageComponent implements OnInit {
     const users = overview?.users;
 
     if (users) {
-      return (
-        this.numberFrom(users, ['admins']) +
-        this.numberFrom(users, ['reviewers']) +
-        this.numberFrom(users, ['viewers'])
-      );
+      return this.numberFrom(users, ['super_admins']) + this.numberFrom(users, ['admins']);
     }
 
     return this.numberFrom(this.overview(), ['active_admins', 'admin_users_total']);
-  }
-
-  private normalizeUsers(response: AnalyticsUsersResponse): PlanningAnalyticsUser[] {
-    if (!response) {
-      return [];
-    }
-
-    if (Array.isArray(response)) {
-      return response;
-    }
-
-    return (
-      response.items ?? this.collectionFrom<PlanningAnalyticsUser>(response, ['users', 'data'])
-    );
   }
 
   private draftStatusDistribution(): DistributionItem[] {

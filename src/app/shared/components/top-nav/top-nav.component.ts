@@ -19,6 +19,7 @@ const NAV_LABELS = {
     health: 'Health',
     settings: 'Settings',
     audit: 'Audit',
+    adminUsage: 'Admin usage',
     responsables: 'Responsables',
     primaryNav: 'Primary',
     darkMode: 'Switch to dark mode',
@@ -35,6 +36,7 @@ const NAV_LABELS = {
     health: 'Sante',
     settings: 'Parametres',
     audit: 'Audit',
+    adminUsage: 'Usage admin',
     responsables: 'Responsables',
     primaryNav: 'Navigation principale',
     darkMode: 'Activer le mode sombre',
@@ -80,6 +82,7 @@ export class TtTopNavComponent {
     { labelKey: 'health', route: '/health', icon: 'health', exact: false },
     { labelKey: 'settings', route: '/settings', icon: 'settings', exact: false },
     { labelKey: 'audit', route: '/audit', icon: 'audit', exact: false },
+    { labelKey: 'adminUsage', route: '/admin-usage', icon: 'audit', exact: false },
     { labelKey: 'responsables', route: '/responsables', icon: 'admins', exact: false },
   ];
 

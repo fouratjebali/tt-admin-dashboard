@@ -465,9 +465,8 @@ export class HealthPageComponent implements OnInit {
 
     if (overviewUsers) {
       return (
-        this.numberFrom(overviewUsers, ['admins']) +
-        this.numberFrom(overviewUsers, ['reviewers']) +
-        this.numberFrom(overviewUsers, ['viewers'])
+        this.numberFrom(overviewUsers, ['super_admins']) +
+        this.numberFrom(overviewUsers, ['admins'])
       );
     }
 

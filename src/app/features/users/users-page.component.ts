@@ -138,7 +138,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   protected readonly searchTerm = signal('');
   protected readonly roleFilter = signal<RoleFilter>('all');
   protected readonly statusFilter = signal<StatusFilter>('all');
-  protected readonly roles: AdminRole[] = ['admin', 'reviewer', 'viewer', 'user'];
+  protected readonly roles: AdminRole[] = ['super_admin', 'admin', 'user'];
 
   protected readonly filteredUsers = computed(() =>
     this.users().filter((user) => {
@@ -155,7 +155,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     const users = this.users();
     const active = users.filter((user) => user.is_active).length;
     const privileged = users.filter(
-      (user) => user.role === 'admin' || user.role === 'reviewer',
+      (user) => user.role === 'super_admin' || user.role === 'admin',
     ).length;
 
     return [

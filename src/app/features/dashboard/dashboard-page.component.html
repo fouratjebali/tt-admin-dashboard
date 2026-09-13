@@ -165,57 +165,5 @@
         }
       </div>
     </section>
-
-    <section class="dashboard-panel dashboard-panel--wide">
-      <div class="dashboard-panel__header">
-        <div>
-          <h2>{{ copy().usersTitle }}</h2>
-        </div>
-        <svg lucideCircleCheckBig size="18"></svg>
-      </div>
-
-      <div class="activity-table" role="table">
-        <div class="activity-table__head activity-table__head--users" role="row">
-          <span role="columnheader">{{ copy().table.user }}</span>
-          <span role="columnheader">{{ copy().table.prepared }}</span>
-          <span role="columnheader">{{ copy().table.reviewed }}</span>
-          <span role="columnheader">{{ copy().table.sent }}</span>
-          <span role="columnheader">{{ copy().table.total }}</span>
-        </div>
-        @if (topUsers().length === 0) {
-          <div class="dashboard-empty dashboard-empty--table">{{ copy().noData }}</div>
-        } @else {
-          @for (user of topUsers(); track userName(user)) {
-            <div class="activity-table__row activity-table__row--users" role="row">
-              <span role="cell">{{ userName(user) }}</span>
-              <span role="cell">{{ userPrepared(user) }}</span>
-              <span role="cell">{{ userReviewed(user) }}</span>
-              <span role="cell">{{ userSent(user) }}</span>
-              <span role="cell">
-                <mark>{{ userActions(user) }}</mark>
-              </span>
-            </div>
-          }
-        }
-      </div>
-    </section>
-
-    <section class="dashboard-panel">
-      <div class="dashboard-panel__header">
-        <div>
-          <h2>{{ copy().statusTitle }}</h2>
-        </div>
-        <svg lucideClock size="18"></svg>
-      </div>
-
-      <div class="status-list">
-        @for (item of statusRows(); track item.label) {
-          <div class="status-row" [class.status-row--muted]="!item.available">
-            <span>{{ item.label }}</span>
-            <strong>{{ statusLabel(item.available) }}</strong>
-          </div>
-        }
-      </div>
-    </section>
   </div>
 </section>
