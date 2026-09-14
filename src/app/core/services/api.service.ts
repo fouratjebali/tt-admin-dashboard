@@ -72,10 +72,6 @@ export class ApiService {
     return this.http.get<AdminHealth>(this.adminUrl('/health'));
   }
 
-  logoutAdmin(): Observable<void> {
-    return this.http.post<void>(this.apiUrl('/auth/logout'), {});
-  }
-
   listUsers(filters?: ApiFilters): Observable<PaginatedResponse<AdminUser> | AdminUser[]> {
     return this.http.get<PaginatedResponse<AdminUser> | AdminUser[]>(this.adminUrl('/users'), {
       params: this.buildParams(filters),

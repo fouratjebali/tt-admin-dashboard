@@ -1,6 +1,6 @@
 import { computed, Injectable, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, finalize, throwError, tap } from 'rxjs';
+import { Observable, catchError, of, throwError, tap } from 'rxjs';
 
 import { AdminIdentity, AdminRole, BackendSession } from '../models/backend-api.model';
 import { ApiService } from './api.service';
@@ -79,7 +79,9 @@ export class AuthService {
   }
 
   signOut(): Observable<void> {
-    return this.apiService.logoutAdmin().pipe(finalize(() => this.logout()));
+    this.logout();
+
+    return of(void 0);
   }
 
   logout(): void {
