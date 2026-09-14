@@ -485,3 +485,95 @@ a {
 .usage-empty--compact {
   min-height: 80px;
 }
+
+.users-drawer {
+  inset: 0;
+  position: fixed;
+  z-index: 45;
+}
+
+.users-drawer__scrim {
+  background: color-mix(in srgb, var(--tt-ink) 30%, transparent);
+  border: 0;
+  inset: 0;
+  padding: 0;
+  position: absolute;
+}
+
+.users-drawer__scrim span {
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.users-drawer__panel {
+  background: var(--tt-card);
+  border-left: 1px solid var(--tt-line);
+  bottom: 0;
+  box-shadow: -24px 0 60px rgba(15, 23, 42, 0.2);
+  display: grid;
+  gap: 16px;
+  max-width: 420px;
+  overflow: auto;
+  padding: 20px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: min(420px, 100vw);
+}
+
+.users-drawer__panel header {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.users-drawer__panel header span,
+.users-drawer__panel dt {
+  color: var(--tt-ink-faint);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.users-drawer__panel h2 {
+  color: var(--tt-ink);
+  font-size: 20px;
+  margin: 3px 0 0;
+}
+
+.users-drawer__panel header button {
+  align-items: center;
+  background: var(--tt-card);
+  border: 1px solid var(--tt-line);
+  border-radius: 8px;
+  color: var(--tt-ink-soft);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.users-drawer__panel dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.users-drawer__panel dl div {
+  border-bottom: 1px solid var(--tt-line);
+  display: grid;
+  gap: 5px;
+  padding-bottom: 10px;
+}
+
+.users-drawer__panel dd {
+  color: var(--tt-ink);
+  font-size: 12px;
+  font-weight: 750;
+  margin: 0;
+  overflow-wrap: anywhere;
+}

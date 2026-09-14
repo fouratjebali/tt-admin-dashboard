@@ -4,13 +4,17 @@ import {
   LucideChevronRight,
   LucideCircleCheck,
   LucideCircleOff,
+  LucideEye,
+  LucidePencil,
   LucideRefreshCw,
   LucideSearch,
   LucideShieldCheck,
+  LucideTrash2,
   LucideUserCog,
   LucideUsers,
+  LucideX,
 } from '@lucide/angular';
-import { finalize } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { AdminRole, AdminUser, PaginatedResponse } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
@@ -19,6 +23,12 @@ import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 type RoleFilter = 'all' | AdminRole;
+type UserSource = 'admin-account' | 'directory-user';
+type DetailMode = 'view' | 'edit';
+
+type ManagedUser = AdminUser & {
+  source: UserSource;
+};
 
 const PAGE_SIZE = 20;
 
@@ -41,8 +51,18 @@ const COPY = {
     lastLogin: 'Last login',
     created: 'Created',
     actions: 'Actions',
+    view: 'View',
+    edit: 'Edit',
+    delete: 'Delete',
+    close: 'Close',
     activate: 'Activate',
     deactivate: 'Deactivate',
+    details: 'User details',
+    deleteDisabled: 'Delete will be enabled after the backend CRUD API is ready.',
+    source: 'Source',
+    email: 'Email',
+    accountSource: 'Admin account',
+    directorySource: 'User directory',
     retry: 'Retry',
     loading: 'Loading users',
     emptyTitle: 'No users found',
@@ -82,8 +102,18 @@ const COPY = {
     lastLogin: 'Derniere connexion',
     created: 'Creation',
     actions: 'Actions',
+    view: 'Voir',
+    edit: 'Modifier',
+    delete: 'Supprimer',
+    close: 'Fermer',
     activate: 'Activer',
     deactivate: 'Desactiver',
+    details: 'Details utilisateur',
+    deleteDisabled: 'La suppression sera active apres ajout de l API CRUD backend.',
+    source: 'Source',
+    email: 'Email',
+    accountSource: 'Compte admin',
+    directorySource: 'Repertoire users',
     retry: 'Reessayer',
     loading: 'Chargement utilisateurs',
     emptyTitle: 'Aucun utilisateur',
@@ -114,11 +144,15 @@ const COPY = {
     LucideChevronRight,
     LucideCircleCheck,
     LucideCircleOff,
+    LucideEye,
+    LucidePencil,
     LucideRefreshCw,
     LucideSearch,
     LucideShieldCheck,
+    LucideTrash2,
     LucideUserCog,
     LucideUsers,
+    LucideX,
   ],
   templateUrl: './users-page.component.html',
   styleUrl: './users-page.component.scss',
@@ -129,7 +163,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   private searchDebounce?: ReturnType<typeof setTimeout>;
 
   protected readonly copy = computed(() => COPY[this.preferences.language()]);
-  protected readonly users = signal<AdminUser[]>([]);
+  protected readonly users = signal<ManagedUser[]>([]);
   protected readonly total = signal(0);
   protected readonly offset = signal(0);
   protected readonly loading = signal(false);
@@ -138,17 +172,28 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   protected readonly searchTerm = signal('');
   protected readonly roleFilter = signal<RoleFilter>('all');
   protected readonly statusFilter = signal<StatusFilter>('all');
+  protected readonly selectedUser = signal<ManagedUser | null>(null);
+  protected readonly detailMode = signal<DetailMode>('view');
   protected readonly roles: AdminRole[] = ['super_admin', 'admin', 'user'];
 
   protected readonly filteredUsers = computed(() =>
     this.users().filter((user) => {
+      const search = this.searchTerm().trim().toLowerCase();
+      const searchMatches =
+        !search ||
+        [this.displayName(user), user.email, user.username, user.role]
+          .filter(Boolean)
+          .some((value) => value?.toLowerCase().includes(search));
       const roleMatches = this.roleFilter() === 'all' || user.role === this.roleFilter();
       const statusMatches =
         this.statusFilter() === 'all' ||
         (this.statusFilter() === 'active' ? user.is_active : !user.is_active);
 
-      return roleMatches && statusMatches;
+      return searchMatches && roleMatches && statusMatches;
     }),
+  );
+  protected readonly visibleUsers = computed(() =>
+    this.filteredUsers().slice(this.offset(), this.offset() + PAGE_SIZE),
   );
 
   protected readonly stats = computed(() => {
@@ -167,14 +212,14 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   });
 
   protected readonly pageStart = computed(() =>
-    this.total() === 0 && this.users().length === 0 ? 0 : this.offset() + 1,
+    this.filteredUsers().length === 0 ? 0 : this.offset() + 1,
   );
   protected readonly pageEnd = computed(() =>
-    Math.min(this.offset() + this.users().length, this.total() || this.users().length),
+    Math.min(this.offset() + this.visibleUsers().length, this.filteredUsers().length),
   );
   protected readonly canGoPrevious = computed(() => this.offset() > 0 && !this.loading());
   protected readonly canGoNext = computed(
-    () => this.offset() + PAGE_SIZE < this.total() && !this.loading(),
+    () => this.offset() + PAGE_SIZE < this.filteredUsers().length && !this.loading(),
   );
 
   ngOnInit(): void {
@@ -191,18 +236,30 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.error.set('');
 
-    this.apiService
-      .listAdminAccounts({
-        search: this.searchTerm().trim(),
-        limit: PAGE_SIZE,
-        offset: this.offset(),
-      })
+    const search = this.searchTerm().trim();
+    const endpointErrors: string[] = [];
+
+    forkJoin({
+      adminAccounts: this.apiService
+        .listAdminAccounts({ search, limit: 200, offset: 0 })
+        .pipe(catchError((error: unknown) => this.usersFallback(error, endpointErrors))),
+      directoryUsers: this.apiService
+        .listUsers({ search, limit: 200, offset: 0 })
+        .pipe(catchError((error: unknown) => this.usersFallback(error, endpointErrors))),
+    })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (response) => {
-          const users = this.normalizeUsersResponse(response);
-          this.users.set(users.items);
-          this.total.set(users.total);
+        next: ({ adminAccounts, directoryUsers }) => {
+          const admins = this.normalizeUsersResponse(adminAccounts, 'admin-account').items;
+          const users = this.normalizeUsersResponse(directoryUsers, 'directory-user').items;
+          const merged = this.mergeUsers(users, admins);
+
+          this.users.set(merged);
+          this.total.set(merged.length);
+
+          if (!adminAccounts && !directoryUsers) {
+            this.error.set(endpointErrors[0] ?? this.copy().errors.load);
+          }
         },
         error: (error: unknown) => {
           this.error.set(this.errorMessage(error, this.copy().errors.load));
@@ -229,14 +286,16 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   protected updateRoleFilter(event: Event): void {
     const select = event.target as HTMLSelectElement;
     this.roleFilter.set(select.value as RoleFilter);
+    this.offset.set(0);
   }
 
   protected updateStatusFilter(event: Event): void {
     const select = event.target as HTMLSelectElement;
     this.statusFilter.set(select.value as StatusFilter);
+    this.offset.set(0);
   }
 
-  protected changeUserRole(user: AdminUser, event: Event): void {
+  protected changeUserRole(user: ManagedUser, event: Event): void {
     const select = event.target as HTMLSelectElement;
     const nextRole = select.value as AdminRole;
 
@@ -247,37 +306,41 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     this.savingUserId.set(`${this.userId(user)}:role`);
     this.error.set('');
 
-    this.apiService
-      .updateAdminAccount(this.userId(user), {
-        username: user.username,
-        email: user.email,
-        display_name: user.display_name ?? user.full_name ?? user.name,
-        role: nextRole,
-        is_active: user.is_active,
-      })
-      .pipe(finalize(() => this.savingUserId.set('')))
-      .subscribe({
-        next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser)),
-        error: (error: unknown) => {
-          select.value = user.role;
-          this.error.set(this.errorMessage(error, this.copy().errors.role));
-        },
-      });
+    const request: Observable<unknown> =
+      user.source === 'admin-account'
+        ? this.apiService.updateAdminAccount(this.userId(user), {
+            username: user.username,
+            email: user.email,
+            display_name: user.display_name ?? user.full_name ?? user.name,
+            role: nextRole,
+            is_active: user.is_active,
+          })
+        : this.apiService.updateUserRole(this.userId(user), nextRole);
+
+    request.pipe(finalize(() => this.savingUserId.set(''))).subscribe({
+      next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser, user.source)),
+      error: (error: unknown) => {
+        select.value = user.role;
+        this.error.set(this.errorMessage(error, this.copy().errors.role));
+      },
+    });
   }
 
-  protected toggleUserStatus(user: AdminUser): void {
+  protected toggleUserStatus(user: ManagedUser): void {
     this.savingUserId.set(`${this.userId(user)}:status`);
     this.error.set('');
 
-    this.apiService
-      .updateAdminAccountActive(this.userId(user), !user.is_active)
-      .pipe(finalize(() => this.savingUserId.set('')))
-      .subscribe({
-        next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser)),
-        error: (error: unknown) => {
-          this.error.set(this.errorMessage(error, this.copy().errors.status));
-        },
-      });
+    const request: Observable<unknown> =
+      user.source === 'admin-account'
+        ? this.apiService.updateAdminAccountActive(this.userId(user), !user.is_active)
+        : this.apiService.updateUserActive(this.userId(user), !user.is_active);
+
+    request.pipe(finalize(() => this.savingUserId.set(''))).subscribe({
+      next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser, user.source)),
+      error: (error: unknown) => {
+        this.error.set(this.errorMessage(error, this.copy().errors.status));
+      },
+    });
   }
 
   protected previousPage(): void {
@@ -296,6 +359,26 @@ export class UsersPageComponent implements OnInit, OnDestroy {
 
     this.offset.update((offset) => offset + PAGE_SIZE);
     this.loadUsers();
+  }
+
+  protected viewUser(user: ManagedUser): void {
+    this.detailMode.set('view');
+    this.selectedUser.set(user);
+  }
+
+  protected editUser(user: ManagedUser): void {
+    this.detailMode.set('edit');
+    this.selectedUser.set(user);
+  }
+
+  protected closeUserDetails(): void {
+    this.selectedUser.set(null);
+  }
+
+  protected userSourceLabel(user: ManagedUser): string {
+    return user.source === 'admin-account'
+      ? this.copy().accountSource
+      : this.copy().directorySource;
   }
 
   protected userInitials(user: AdminUser): string {
@@ -345,18 +428,29 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     return user.id ?? user.user_id ?? user.username ?? user.email;
   }
 
-  private replaceUser(updatedUser: AdminUser): void {
+  private replaceUser(updatedUser: ManagedUser): void {
     this.users.update((users) =>
       users.map((user) => (this.userId(user) === this.userId(updatedUser) ? updatedUser : user)),
     );
+
+    if (this.selectedUser() && this.userId(this.selectedUser()!) === this.userId(updatedUser)) {
+      this.selectedUser.set(updatedUser);
+    }
   }
 
-  private normalizeUsersResponse(response: PaginatedResponse<AdminUser> | AdminUser[]): {
-    items: AdminUser[];
+  private normalizeUsersResponse(
+    response: PaginatedResponse<AdminUser> | AdminUser[] | null,
+    source: UserSource,
+  ): {
+    items: ManagedUser[];
     total: number;
   } {
+    if (!response) {
+      return { items: [], total: 0 };
+    }
+
     if (Array.isArray(response)) {
-      const items = response.map((user) => this.normalizeUser(user));
+      const items = response.map((user) => this.normalizeUser(user, source));
 
       return {
         items,
@@ -364,7 +458,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
       };
     }
 
-    const items = this.userArrayFrom(response).map((user) => this.normalizeUser(user));
+    const items = this.userArrayFrom(response).map((user) => this.normalizeUser(user, source));
 
     return {
       items,
@@ -372,7 +466,24 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     };
   }
 
-  private normalizeUser(user: unknown): AdminUser {
+  private mergeUsers(directoryUsers: ManagedUser[], adminAccounts: ManagedUser[]): ManagedUser[] {
+    const merged = new Map<string, ManagedUser>();
+
+    for (const user of [...directoryUsers, ...adminAccounts]) {
+      const key = this.userKey(user);
+      const existing = merged.get(key);
+
+      merged.set(key, existing ? { ...existing, ...user, source: user.source } : user);
+    }
+
+    return [...merged.values()].sort(
+      (left, right) =>
+        this.roleRank(left.role) - this.roleRank(right.role) ||
+        this.displayName(left).localeCompare(this.displayName(right)),
+    );
+  }
+
+  private normalizeUser(user: unknown, source: UserSource): ManagedUser {
     const record = user && typeof user === 'object' ? (user as Record<string, unknown>) : {};
     const email = this.stringFrom(record, ['email', 'mail', 'user_email']);
     const username = this.stringFrom(record, ['username', 'login', 'user_name']);
@@ -391,12 +502,28 @@ export class UsersPageComponent implements OnInit, OnDestroy {
       created_at: this.stringFrom(record, ['created_at', 'createdAt', 'created']),
       updated_at: this.stringFrom(record, ['updated_at', 'updatedAt', 'updated']),
       last_login_at: this.stringFrom(record, ['last_login_at', 'lastLoginAt', 'last_login']),
+      source,
     };
+  }
+
+  private userKey(user: ManagedUser): string {
+    return (user.email || this.userId(user)).toLowerCase();
+  }
+
+  private roleRank(role: AdminRole): number {
+    return { super_admin: 0, admin: 1, user: 2 }[role];
   }
 
   private userArrayFrom(response: PaginatedResponse<AdminUser>): unknown[] {
     const record = response as unknown as Record<string, unknown>;
-    const direct = this.arrayFrom(record, ['items', 'users', 'data', 'results', 'records']);
+    const direct = this.arrayFrom(record, [
+      'items',
+      'admins',
+      'users',
+      'data',
+      'results',
+      'records',
+    ]);
 
     if (direct.length > 0 || Array.isArray(record['items'])) {
       return direct;
@@ -407,6 +534,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     if (nestedData && typeof nestedData === 'object') {
       return this.arrayFrom(nestedData as Record<string, unknown>, [
         'items',
+        'admins',
         'users',
         'results',
         'records',
@@ -528,6 +656,12 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     }
 
     return false;
+  }
+
+  private usersFallback(error: unknown, endpointErrors: string[]) {
+    endpointErrors.push(this.errorMessage(error, this.copy().errors.load));
+
+    return of(null);
   }
 
   private activeFrom(record: Record<string, unknown>): boolean {

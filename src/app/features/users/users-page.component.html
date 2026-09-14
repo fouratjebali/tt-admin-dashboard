@@ -110,7 +110,7 @@
           <span>{{ copy().emptyBody }}</span>
         </div>
       } @else {
-        @for (user of filteredUsers(); track userId(user)) {
+        @for (user of visibleUsers(); track userId(user)) {
           <div class="users-table__row" role="row">
             <div class="users-user" role="cell">
               <span class="users-user__avatar">{{ userInitials(user) }}</span>
@@ -148,7 +148,25 @@
             <time role="cell">{{ formatDate(user.last_login_at) }}</time>
             <time role="cell">{{ formatDate(user.created_at) }}</time>
 
-            <span role="cell">
+            <span class="users-actions" role="cell">
+              <button
+                class="users-icon-action"
+                type="button"
+                [attr.aria-label]="copy().view"
+                [attr.title]="copy().view"
+                (click)="viewUser(user)"
+              >
+                <svg lucideEye size="15"></svg>
+              </button>
+              <button
+                class="users-icon-action"
+                type="button"
+                [attr.aria-label]="copy().edit"
+                [attr.title]="copy().edit"
+                (click)="editUser(user)"
+              >
+                <svg lucidePencil size="15"></svg>
+              </button>
               <button
                 class="users-action"
                 type="button"
@@ -156,6 +174,15 @@
                 (click)="toggleUserStatus(user)"
               >
                 {{ user.is_active ? copy().deactivate : copy().activate }}
+              </button>
+              <button
+                class="users-icon-action users-icon-action--danger"
+                type="button"
+                disabled
+                [attr.aria-label]="copy().delete"
+                [attr.title]="copy().deleteDisabled"
+              >
+                <svg lucideTrash2 size="15"></svg>
               </button>
             </span>
           </div>
@@ -165,7 +192,8 @@
 
     <footer class="users-pagination">
       <span
-        >{{ copy().range }} {{ pageStart() }}-{{ pageEnd() }} {{ copy().of }} {{ total() }}</span
+        >{{ copy().range }} {{ pageStart() }}-{{ pageEnd() }} {{ copy().of }}
+        {{ filteredUsers().length }}</span
       >
       <div>
         <button
@@ -187,4 +215,65 @@
       </div>
     </footer>
   </section>
+
+  @if (selectedUser(); as user) {
+    <aside class="users-drawer" role="dialog" aria-modal="true" [attr.aria-label]="copy().details">
+      <button class="users-drawer__scrim" type="button" (click)="closeUserDetails()">
+        <span>{{ copy().close }}</span>
+      </button>
+      <section class="users-drawer__panel">
+        <header>
+          <div>
+            <span>{{ detailMode() === 'edit' ? copy().edit : copy().view }}</span>
+            <h2>{{ displayName(user) }}</h2>
+          </div>
+          <button type="button" [attr.aria-label]="copy().close" (click)="closeUserDetails()">
+            <svg lucideX size="18"></svg>
+          </button>
+        </header>
+
+        <dl>
+          <div>
+            <dt>{{ copy().email }}</dt>
+            <dd>{{ user.email || '-' }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().role }}</dt>
+            <dd>
+              @if (detailMode() === 'edit') {
+                <select
+                  class="users-role-select"
+                  [value]="user.role"
+                  [disabled]="isSaving(user, 'role')"
+                  (change)="changeUserRole(user, $event)"
+                >
+                  @for (role of roles; track role) {
+                    <option [value]="role">{{ role }}</option>
+                  }
+                </select>
+              } @else {
+                {{ user.role }}
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ copy().status }}</dt>
+            <dd>{{ user.is_active ? copy().active : copy().inactive }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().source }}</dt>
+            <dd>{{ userSourceLabel(user) }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().lastLogin }}</dt>
+            <dd>{{ formatDate(user.last_login_at) }}</dd>
+          </div>
+          <div>
+            <dt>{{ copy().created }}</dt>
+            <dd>{{ formatDate(user.created_at) }}</dd>
+          </div>
+        </dl>
+      </section>
+    </aside>
+  }
 </section>
