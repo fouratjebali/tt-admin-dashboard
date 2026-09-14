@@ -23,6 +23,8 @@ import {
   AdminHealth,
   AdminHealthService,
   AdminOverview,
+  AdminUsageOverview,
+  PlanningAnalyticsOverview,
 } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -230,10 +232,19 @@ export class HealthPageComponent implements OnInit {
   protected readonly copy = computed(() => COPY[this.preferences.language()]);
   protected readonly health = signal<AdminHealth | null>(null);
   protected readonly overview = signal<AdminOverview | null>(null);
+  protected readonly planningOverview = signal<PlanningAnalyticsOverview | null>(null);
+  protected readonly usageOverview = signal<AdminUsageOverview | null>(null);
   protected readonly loading = signal(false);
   protected readonly error = signal('');
   protected readonly latencyMs = signal<number | null>(null);
   protected readonly checkedAt = signal<Date | null>(null);
+  private readonly adminDirectory = signal<unknown[]>([]);
+  private readonly userDirectory = signal<unknown[]>([]);
+  private readonly adminDirectoryTotal = signal<number | null>(null);
+  private readonly userDirectoryTotal = signal<number | null>(null);
+  private readonly planningImportsCount = signal<number | null>(null);
+  private readonly sendHistoryCount = signal<number | null>(null);
+  private readonly auditEventsCount = signal<number | null>(null);
 
   protected readonly overallStatus = computed<HealthStatus>(() => {
     if (this.error()) {
@@ -296,11 +307,10 @@ export class HealthPageComponent implements OnInit {
       return backendServices.map((service) => this.backendService(service));
     }
 
-    const overview = this.overview();
     const hasHealth = Boolean(this.health() && !this.error());
     const pending = this.pendingReviews();
-    const sent = this.asNumber(overview?.drafts_sent);
-    const audits = this.asNumber(overview?.audit_events_total);
+    const sent = this.draftsSent() ?? 0;
+    const audits = this.auditEvents() ?? 0;
 
     return [
       this.service('api', hasHealth ? 'healthy' : this.error() ? 'down' : 'attention', {
@@ -344,22 +354,20 @@ export class HealthPageComponent implements OnInit {
   ]);
 
   protected readonly snapshot = computed(() => {
-    const overview = this.overview();
-
     return [
-      { label: this.copy().snapshotLabels.users, value: this.formatNumber(overview?.users_total) },
+      { label: this.copy().snapshotLabels.users, value: this.formatNumber(this.totalUsers()) },
       {
         label: this.copy().snapshotLabels.admins,
         value: this.formatNumber(this.adminUsers()),
       },
       {
         label: this.copy().snapshotLabels.imports,
-        value: this.formatNumber(overview?.planning_imports_total),
+        value: this.formatNumber(this.planningImports()),
       },
       { label: this.copy().snapshotLabels.sent, value: this.formatNumber(this.draftsSent()) },
       {
         label: this.copy().snapshotLabels.audits,
-        value: this.formatNumber(overview?.audit_events_total),
+        value: this.formatNumber(this.auditEvents()),
       },
     ];
   });
@@ -380,22 +388,84 @@ export class HealthPageComponent implements OnInit {
         .getAdminHealth()
         .pipe(catchError((error: unknown) => this.healthFallback(error, endpointErrors))),
       overview: this.apiService.getOverview().pipe(catchError(() => of(null))),
+      planningOverview: this.apiService
+        .getPlanningAnalyticsOverview()
+        .pipe(catchError(() => of(null))),
+      usageOverview: this.apiService.getAdminUsageOverview().pipe(catchError(() => of(null))),
+      adminAccounts: this.apiService
+        .listAdminAccounts({ limit: 200, offset: 0 })
+        .pipe(catchError(() => of(null))),
+      directoryUsers: this.apiService
+        .listUsers({ limit: 200, offset: 0 })
+        .pipe(catchError(() => of(null))),
+      planningImports: this.apiService
+        .listPlanningImports({ limit: 1, offset: 0 })
+        .pipe(catchError(() => of(null))),
+      sendHistory: this.apiService
+        .listSendHistory({ limit: 1, offset: 0 })
+        .pipe(catchError(() => of(null))),
+      auditLogs: this.apiService
+        .listAuditLogs({ limit: 1, offset: 0 })
+        .pipe(catchError(() => of(null))),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ health, overview }) => {
-          this.health.set(health);
-          this.overview.set(overview);
-          this.latencyMs.set(health?.latency_ms ?? Math.round(performance.now() - startedAt));
+        next: ({
+          health,
+          overview,
+          planningOverview,
+          usageOverview,
+          adminAccounts,
+          directoryUsers,
+          planningImports,
+          sendHistory,
+          auditLogs,
+        }) => {
+          const normalizedHealth = this.normalizeHealth(health);
+
+          this.health.set(normalizedHealth);
+          this.overview.set(this.normalizeAdminOverview(overview));
+          this.planningOverview.set(this.normalizePlanningOverview(planningOverview));
+          this.usageOverview.set(this.normalizeUsageOverview(usageOverview));
+          this.adminDirectory.set(
+            this.collectionFrom(adminAccounts, [
+              'items',
+              'admins',
+              'users',
+              'data',
+              'results',
+              'records',
+            ]),
+          );
+          this.userDirectory.set(
+            this.collectionFrom(directoryUsers, ['items', 'users', 'data', 'results', 'records']),
+          );
+          this.adminDirectoryTotal.set(this.totalFromResponse(adminAccounts));
+          this.userDirectoryTotal.set(this.totalFromResponse(directoryUsers));
+          this.planningImportsCount.set(this.totalFromResponse(planningImports));
+          this.sendHistoryCount.set(this.totalFromResponse(sendHistory));
+          this.auditEventsCount.set(this.totalFromResponse(auditLogs));
+          this.latencyMs.set(
+            normalizedHealth?.latency_ms ?? Math.round(performance.now() - startedAt),
+          );
           this.checkedAt.set(new Date());
 
-          if (!health) {
+          if (!normalizedHealth) {
             this.error.set(endpointErrors[0] ?? this.copy().errors.load);
           }
         },
         error: (error: unknown) => {
           this.health.set(null);
           this.overview.set(null);
+          this.planningOverview.set(null);
+          this.usageOverview.set(null);
+          this.adminDirectory.set([]);
+          this.userDirectory.set([]);
+          this.adminDirectoryTotal.set(null);
+          this.userDirectoryTotal.set(null);
+          this.planningImportsCount.set(null);
+          this.sendHistoryCount.set(null);
+          this.auditEventsCount.set(null);
           this.latencyMs.set(null);
           this.checkedAt.set(new Date());
           this.error.set(this.errorMessage(error));
@@ -447,20 +517,47 @@ export class HealthPageComponent implements OnInit {
   }
 
   private pendingReviews(): number {
-    return this.numberFrom(this.overview(), [
-      'training.drafts_waiting_review',
-      'drafts_pending_review',
-    ]);
+    return (
+      this.firstDefinedNumber([
+        this.numberFrom(this.planningOverview(), [
+          'drafts.waiting_review',
+          'drafts_pending_review',
+          'summary.waiting_review',
+        ]),
+        this.numberFrom(this.overview(), [
+          'training.drafts_waiting_review',
+          'drafts_pending_review',
+        ]),
+      ]) ?? 0
+    );
   }
 
   private activeUsers(): number | undefined {
+    const loadedUsers = this.mergedDirectoryUsers();
+    const activeDirectoryUsers = loadedUsers.filter((user) => this.activeFrom(user)).length;
+
     return this.firstDefinedNumber([
       this.numberFrom(this.overview(), ['users.active']),
       this.numberFrom(this.overview(), ['active_users']),
+      loadedUsers.length > 0 ? activeDirectoryUsers : undefined,
     ]);
   }
 
   private adminUsers(): number | undefined {
+    const adminAccounts = this.adminDirectory();
+
+    if (adminAccounts.length > 0) {
+      const privileged = adminAccounts.filter((user) => this.isPrivilegedUser(user)).length;
+
+      return privileged > 0 ? privileged : adminAccounts.length;
+    }
+
+    const adminDirectoryTotal = this.adminDirectoryTotal();
+
+    if (adminDirectoryTotal !== null) {
+      return adminDirectoryTotal;
+    }
+
     const overviewUsers = this.overview()?.users;
 
     if (overviewUsers) {
@@ -470,18 +567,115 @@ export class HealthPageComponent implements OnInit {
       );
     }
 
-    return this.firstDefinedNumber([this.numberFrom(this.overview(), ['admins_total'])]);
+    return this.firstDefinedNumber([
+      this.numberFrom(this.overview(), ['admins_total']),
+      this.numberFrom(this.planningOverview(), ['admin_users_total']),
+      this.numberFrom(this.usageOverview(), ['active_admins']),
+    ]);
+  }
+
+  private totalUsers(): number | undefined {
+    const mergedUsers = this.mergedDirectoryUsers();
+
+    if (mergedUsers.length > 0) {
+      return mergedUsers.length;
+    }
+
+    const adminDirectoryTotal = this.adminDirectoryTotal();
+    const userDirectoryTotal = this.userDirectoryTotal();
+
+    if (adminDirectoryTotal !== null || userDirectoryTotal !== null) {
+      return (adminDirectoryTotal ?? 0) + (userDirectoryTotal ?? 0);
+    }
+
+    return this.firstDefinedNumber([
+      this.numberFrom(this.overview(), ['users.total']),
+      this.numberFrom(this.overview(), ['users_total', 'total_users', 'user_count']),
+    ]);
+  }
+
+  private planningImports(): number | undefined {
+    return this.firstDefinedNumber([
+      this.planningImportsCount(),
+      this.numberFrom(this.planningOverview(), [
+        'totals.imports',
+        'admin_usage.imports_created',
+        'imports_total',
+        'planning_imports_total',
+      ]),
+      this.numberFrom(this.overview(), ['planning_imports_total', 'imports_total']),
+      this.numberFrom(this.overview(), ['training.imports_total']),
+    ]);
+  }
+
+  private auditEvents(): number | undefined {
+    return this.firstDefinedNumber([
+      this.auditEventsCount(),
+      this.numberFrom(this.overview(), [
+        'audit_events_total',
+        'audit_logs_total',
+        'audit.total',
+        'audits.total',
+      ]),
+      this.numberFrom(this.usageOverview(), ['total_actions']),
+    ]);
   }
 
   private draftsSent(): number | undefined {
     return this.firstDefinedNumber([
+      this.sendHistoryCount(),
+      this.numberFrom(this.planningOverview(), [
+        'admin_usage.drafts_sent',
+        'totals.sent',
+        'drafts.sent',
+        'drafts_sent',
+        'send_history_total',
+      ]),
       this.numberFrom(this.overview(), ['training.sent_drafts']),
       this.numberFrom(this.overview(), ['drafts_sent']),
     ]);
   }
 
-  private asNumber(value: unknown): number {
-    return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  private normalizeHealth(source: unknown): AdminHealth | null {
+    return this.unwrapHealthPayload<AdminHealth>(source, [
+      'health',
+      'system_health',
+      'data',
+      'result',
+    ]);
+  }
+
+  private normalizeAdminOverview(source: unknown): AdminOverview | null {
+    return this.unwrapHealthPayload<AdminOverview>(source, [
+      'overview',
+      'admin_overview',
+      'dashboard',
+      'data',
+      'stats',
+      'result',
+    ]);
+  }
+
+  private normalizePlanningOverview(source: unknown): PlanningAnalyticsOverview | null {
+    return this.unwrapHealthPayload<PlanningAnalyticsOverview>(source, [
+      'overview',
+      'analytics',
+      'planning',
+      'data',
+      'stats',
+      'result',
+    ]);
+  }
+
+  private normalizeUsageOverview(source: unknown): AdminUsageOverview | null {
+    return this.unwrapHealthPayload<AdminUsageOverview>(source, [
+      'overview',
+      'usage',
+      'analytics',
+      'data',
+      'stats',
+      'result',
+    ]);
   }
 
   private numberFrom(source: unknown, paths: string[]): number {
@@ -500,10 +694,228 @@ export class HealthPageComponent implements OnInit {
     return 0;
   }
 
-  private firstDefinedNumber(values: number[]): number | undefined {
-    return (
-      values.find((value) => value > 0) ?? (values.some((value) => value === 0) ? 0 : undefined)
+  private firstDefinedNumber(values: (number | null | undefined)[]): number | undefined {
+    const numericValues = values.filter(
+      (value): value is number => typeof value === 'number' && Number.isFinite(value),
     );
+
+    return (
+      numericValues.find((value) => value > 0) ??
+      (numericValues.some((value) => value === 0) ? 0 : undefined)
+    );
+  }
+
+  private collectionFrom(source: unknown, keys: string[]): unknown[] {
+    if (Array.isArray(source)) {
+      return source;
+    }
+
+    if (!source || typeof source !== 'object') {
+      return [];
+    }
+
+    const record = source as Record<string, unknown>;
+
+    for (const key of keys) {
+      const value = record[key];
+
+      if (Array.isArray(value)) {
+        return value;
+      }
+
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const nestedItems = this.collectionFrom(value, [
+          'items',
+          'admins',
+          'users',
+          'logs',
+          'imports',
+          'history',
+          'data',
+          'results',
+          'records',
+        ]);
+
+        if (nestedItems.length > 0) {
+          return nestedItems;
+        }
+      }
+    }
+
+    return [];
+  }
+
+  private totalFromResponse(source: unknown): number | null {
+    if (Array.isArray(source)) {
+      return source.length;
+    }
+
+    if (!source || typeof source !== 'object') {
+      return null;
+    }
+
+    const direct = this.optionalNumberFrom(source, [
+      'total',
+      'count',
+      'total_count',
+      'totalCount',
+      'total_items',
+      'totalItems',
+    ]);
+
+    if (direct !== null) {
+      return direct;
+    }
+
+    const nestedData = this.valueAt(source, 'data');
+
+    if (nestedData && typeof nestedData === 'object') {
+      return this.totalFromResponse(nestedData);
+    }
+
+    const items = this.collectionFrom(source, [
+      'items',
+      'admins',
+      'users',
+      'logs',
+      'imports',
+      'history',
+      'data',
+      'results',
+      'records',
+    ]);
+
+    return items.length > 0 ? items.length : null;
+  }
+
+  private optionalNumberFrom(source: unknown, paths: string[]): number | null {
+    if (!source || typeof source !== 'object') {
+      return null;
+    }
+
+    for (const path of paths) {
+      const value = this.valueAt(source, path);
+
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+      }
+
+      if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) {
+        return Number(value);
+      }
+    }
+
+    return null;
+  }
+
+  private unwrapHealthPayload<T>(source: unknown, keys: string[]): T | null {
+    if (!source || typeof source !== 'object' || Array.isArray(source)) {
+      return null;
+    }
+
+    const record = source as Record<string, unknown>;
+
+    if (this.hasHealthMetricShape(record)) {
+      return record as T;
+    }
+
+    for (const key of keys) {
+      const value = record[key];
+
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        continue;
+      }
+
+      const nested = value as Record<string, unknown>;
+
+      if (this.hasHealthMetricShape(nested)) {
+        return nested as T;
+      }
+
+      const deepNested = this.unwrapHealthPayload<T>(nested, keys);
+
+      if (deepNested) {
+        return deepNested;
+      }
+    }
+
+    return record as T;
+  }
+
+  private hasHealthMetricShape(record: Record<string, unknown>): boolean {
+    return [
+      'status',
+      'services',
+      'latency_ms',
+      'totals',
+      'summary',
+      'training',
+      'drafts',
+      'admin_usage',
+      'users',
+      'total',
+      'count',
+      'active_admins',
+      'health_check_count',
+    ].some((key) => key in record);
+  }
+
+  private mergedDirectoryUsers(): unknown[] {
+    const merged = new Map<string, unknown>();
+
+    for (const user of [...this.userDirectory(), ...this.adminDirectory()]) {
+      const key = this.userKey(user);
+
+      if (key) {
+        merged.set(key, user);
+      }
+    }
+
+    return [...merged.values()];
+  }
+
+  private userKey(source: unknown): string {
+    if (!source || typeof source !== 'object') {
+      return '';
+    }
+
+    return String(
+      this.valueAt(source, 'email') ??
+        this.valueAt(source, 'user_email') ??
+        this.valueAt(source, 'username') ??
+        this.valueAt(source, 'id') ??
+        this.valueAt(source, 'user_id') ??
+        '',
+    )
+      .trim()
+      .toLowerCase();
+  }
+
+  private isPrivilegedUser(source: unknown): boolean {
+    const role = String(this.valueAt(source, 'role') ?? this.valueAt(source, 'admin_role') ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+
+    return ['super_admin', 'superadmin', 'owner', 'admin', 'administrator'].includes(role);
+  }
+
+  private activeFrom(source: unknown): boolean {
+    const value =
+      this.valueAt(source, 'is_active') ??
+      this.valueAt(source, 'isActive') ??
+      this.valueAt(source, 'active') ??
+      this.valueAt(source, 'enabled');
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      return !['false', 'inactive', 'disabled', '0'].includes(value.toLowerCase());
+    }
+
+    return true;
   }
 
   private valueAt(source: unknown, path: string): unknown {
