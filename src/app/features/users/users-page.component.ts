@@ -192,7 +192,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     this.error.set('');
 
     this.apiService
-      .listUsers({
+      .listAdminAccounts({
         search: this.searchTerm().trim(),
         limit: PAGE_SIZE,
         offset: this.offset(),
@@ -248,7 +248,13 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     this.error.set('');
 
     this.apiService
-      .updateUserRole(this.userId(user), nextRole)
+      .updateAdminAccount(this.userId(user), {
+        username: user.username,
+        email: user.email,
+        display_name: user.display_name ?? user.full_name ?? user.name,
+        role: nextRole,
+        is_active: user.is_active,
+      })
       .pipe(finalize(() => this.savingUserId.set('')))
       .subscribe({
         next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser)),
@@ -264,7 +270,7 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     this.error.set('');
 
     this.apiService
-      .updateUserActive(this.userId(user), !user.is_active)
+      .updateAdminAccountActive(this.userId(user), !user.is_active)
       .pipe(finalize(() => this.savingUserId.set('')))
       .subscribe({
         next: (updatedUser) => this.replaceUser(this.normalizeUser(updatedUser)),
@@ -449,9 +455,79 @@ export class UsersPageComponent implements OnInit, OnDestroy {
   }
 
   private roleFrom(record: Record<string, unknown>): AdminRole {
-    const role = this.stringFrom(record, ['role']);
+    const role = this.normalizedRole(
+      this.stringFrom(record, [
+        'role',
+        'admin_role',
+        'dashboard_role',
+        'role_name',
+        'roleName',
+        'type',
+      ]),
+    );
 
-    return this.roles.includes(role as AdminRole) ? (role as AdminRole) : 'user';
+    if (role) {
+      return role;
+    }
+
+    const roles = record['roles'];
+
+    if (Array.isArray(roles)) {
+      for (const value of roles) {
+        const normalized = this.normalizedRole(String(value));
+
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+
+    if (this.booleanFrom(record, ['is_super_admin', 'isSuperAdmin', 'super_admin'])) {
+      return 'super_admin';
+    }
+
+    if (this.booleanFrom(record, ['is_admin', 'isAdmin', 'admin'])) {
+      return 'admin';
+    }
+
+    return 'user';
+  }
+
+  private normalizedRole(value: string): AdminRole | null {
+    const role = value
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+
+    if (role === 'super_admin' || role === 'superadmin' || role === 'owner') {
+      return 'super_admin';
+    }
+
+    if (role === 'admin' || role === 'administrator') {
+      return 'admin';
+    }
+
+    if (role === 'user' || role === 'employee' || role === 'employe') {
+      return 'user';
+    }
+
+    return null;
+  }
+
+  private booleanFrom(record: Record<string, unknown>, keys: string[]): boolean {
+    for (const key of keys) {
+      const value = record[key];
+
+      if (typeof value === 'boolean') {
+        return value;
+      }
+
+      if (typeof value === 'string') {
+        return ['true', '1', 'yes'].includes(value.toLowerCase());
+      }
+    }
+
+    return false;
   }
 
   private activeFrom(record: Record<string, unknown>): boolean {
