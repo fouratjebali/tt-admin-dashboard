@@ -233,34 +233,33 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
   );
 
   protected readonly stats = computed(() => {
-    const responsables = this.globalResponsables();
-    const globalTotal = this.globalTotal();
+    const currentPageResponsables = this.visibleResponsables();
     const residences = new Set(
-      responsables.map((responsable) => this.residenceName(responsable)).filter(Boolean),
+      currentPageResponsables.map((responsable) => this.residenceName(responsable)).filter(Boolean),
     );
     const functions = new Set(
-      responsables.map((responsable) => this.functionName(responsable)).filter(Boolean),
+      currentPageResponsables.map((responsable) => this.functionName(responsable)).filter(Boolean),
     );
 
     return [
       {
         label: this.copy().stats.total,
-        value: this.statsLoading() ? '-' : globalTotal || responsables.length,
+        value: this.total(),
         tone: 'neutral' as StatTone,
       },
       {
         label: this.copy().stats.residences,
-        value: this.statsLoading() ? '-' : residences.size,
+        value: residences.size,
         tone: 'success' as StatTone,
       },
       {
         label: this.copy().stats.functions,
-        value: this.statsLoading() ? '-' : functions.size,
+        value: functions.size,
         tone: 'accent' as StatTone,
       },
       {
         label: this.copy().stats.page,
-        value: this.responsables().length,
+        value: currentPageResponsables.length,
         tone: 'warning' as StatTone,
       },
     ];
