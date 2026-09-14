@@ -182,8 +182,25 @@ export class DashboardPageComponent implements OnInit {
       value: this.formatNumber(
         this.firstNumber([
           this.numberFrom(this.overview(), ['drafts.waiting_review', 'drafts_pending_review']),
-          this.numberFrom(this.drafts(), ['summary.waiting_review']),
-          this.numberFrom(this.adminOverview(), ['training.drafts_waiting_review']),
+          this.numberFrom(this.overview(), [
+            'drafts.pending_review',
+            'drafts.pending',
+            'drafts.waitingReview',
+            'totals.waiting_review',
+            'summary.waiting_review',
+          ]),
+          this.numberFrom(this.drafts(), [
+            'summary.waiting_review',
+            'summary.pending_review',
+            'summary.pending',
+            'waiting_review',
+            'pending_review',
+          ]),
+          this.numberFrom(this.adminOverview(), [
+            'training.drafts_waiting_review',
+            'training.pending_review',
+            'drafts_pending_review',
+          ]),
         ]),
       ),
       change: this.copy().currentRange,
@@ -260,12 +277,12 @@ export class DashboardPageComponent implements OnInit {
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe(({ adminOverview, overview, files, drafts, usageOverview, usageAdmins }) => {
-        this.adminOverview.set(adminOverview as AdminOverview | null);
-        this.overview.set(overview as PlanningAnalyticsOverview | null);
+        this.adminOverview.set(this.normalizeAdminOverview(adminOverview));
+        this.overview.set(this.normalizePlanningOverview(overview));
         this.usageOverview.set(this.normalizeUsageOverview(usageOverview));
         this.usageAdmins.set(this.normalizeUsageAdmins(usageAdmins));
-        this.files.set(files as PlanningAnalyticsFiles | null);
-        this.drafts.set(drafts as PlanningAnalyticsDrafts | null);
+        this.files.set(this.normalizePlanningFiles(files));
+        this.drafts.set(this.normalizePlanningDrafts(drafts));
         this.checkedAt.set(new Date());
 
         if (!adminOverview && !overview && !files && !drafts) {
@@ -346,11 +363,24 @@ export class DashboardPageComponent implements OnInit {
     const overviewFiles = this.firstNumber([
       this.numberFrom(this.overview(), [
         'totals.files',
+        'totals.treated_files',
+        'totals.excel_csv_files',
+        'files.total',
+        'files.treated',
         'files_treated',
         'treated_files_total',
         'files_total',
       ]),
-      this.numberFrom(this.files(), ['summary.treated_files']),
+      this.numberFrom(this.files(), [
+        'summary.treated_files',
+        'summary.files',
+        'summary.total_files',
+        'summary.excel_csv_files',
+        'treated_files',
+        'files_total',
+        'total',
+        'count',
+      ]),
     ]);
 
     if (overviewFiles > 0) {
@@ -368,11 +398,24 @@ export class DashboardPageComponent implements OnInit {
       this.numberFrom(this.overview(), [
         'admin_usage.drafts_generated',
         'totals.drafts',
+        'totals.prepared_drafts',
+        'drafts.total',
+        'drafts.prepared',
+        'drafts.generated',
         'drafts_prepared',
         'drafts_ready',
         'drafts_total',
       ]),
-      this.numberFrom(this.drafts(), ['summary.total_drafts']),
+      this.numberFrom(this.drafts(), [
+        'summary.total_drafts',
+        'summary.prepared_drafts',
+        'summary.drafts_prepared',
+        'summary.drafts',
+        'total_drafts',
+        'drafts_total',
+        'total',
+        'count',
+      ]),
     ]);
   }
 
@@ -432,22 +475,60 @@ export class DashboardPageComponent implements OnInit {
     ]);
   }
 
+  private normalizeAdminOverview(source: unknown): AdminOverview | null {
+    return this.unwrapDashboardPayload<AdminOverview>(source, [
+      'overview',
+      'admin_overview',
+      'dashboard',
+      'data',
+      'stats',
+      'result',
+    ]);
+  }
+
+  private normalizePlanningOverview(source: unknown): PlanningAnalyticsOverview | null {
+    return this.unwrapDashboardPayload<PlanningAnalyticsOverview>(source, [
+      'overview',
+      'analytics',
+      'planning',
+      'data',
+      'stats',
+      'result',
+    ]);
+  }
+
+  private normalizePlanningFiles(source: unknown): PlanningAnalyticsFiles | null {
+    return this.unwrapDashboardPayload<PlanningAnalyticsFiles>(source, [
+      'files_analytics',
+      'file_analytics',
+      'analytics',
+      'files',
+      'data',
+      'stats',
+      'result',
+    ]);
+  }
+
+  private normalizePlanningDrafts(source: unknown): PlanningAnalyticsDrafts | null {
+    return this.unwrapDashboardPayload<PlanningAnalyticsDrafts>(source, [
+      'drafts_analytics',
+      'draft_analytics',
+      'analytics',
+      'drafts',
+      'data',
+      'stats',
+      'result',
+    ]);
+  }
+
   private normalizeUsageOverview(source: unknown): AdminUsageOverview | null {
-    if (!source || typeof source !== 'object') {
-      return null;
-    }
-
-    const record = source as Record<string, unknown>;
-
-    for (const key of ['overview', 'stats', 'analytics', 'data']) {
-      const value = record[key];
-
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        return value as AdminUsageOverview;
-      }
-    }
-
-    return record as AdminUsageOverview;
+    return this.unwrapDashboardPayload<AdminUsageOverview>(source, [
+      'overview',
+      'stats',
+      'analytics',
+      'data',
+      'result',
+    ]);
   }
 
   private normalizeUsageAdmins(source: unknown): AdminUsageAdmin[] {
@@ -539,7 +620,15 @@ export class DashboardPageComponent implements OnInit {
       }
 
       if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const nestedItems = this.collectionFrom<T>(value, ['items', 'users', 'data', 'results']);
+        const nestedItems = this.collectionFrom<T>(value, [
+          'items',
+          'files',
+          'drafts',
+          'users',
+          'data',
+          'results',
+          'records',
+        ]);
 
         if (nestedItems.length > 0) {
           return nestedItems;
@@ -548,6 +637,56 @@ export class DashboardPageComponent implements OnInit {
     }
 
     return [];
+  }
+
+  private unwrapDashboardPayload<T>(source: unknown, keys: string[]): T | null {
+    if (!source || typeof source !== 'object' || Array.isArray(source)) {
+      return null;
+    }
+
+    const record = source as Record<string, unknown>;
+
+    if (this.hasMetricShape(record)) {
+      return record as T;
+    }
+
+    for (const key of keys) {
+      const value = record[key];
+
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        continue;
+      }
+
+      const nested = value as Record<string, unknown>;
+
+      if (this.hasMetricShape(nested)) {
+        return nested as T;
+      }
+
+      const deepNested = this.unwrapDashboardPayload<T>(nested, keys);
+
+      if (deepNested) {
+        return deepNested;
+      }
+    }
+
+    return record as T;
+  }
+
+  private hasMetricShape(record: Record<string, unknown>): boolean {
+    return [
+      'totals',
+      'summary',
+      'training',
+      'drafts',
+      'files',
+      'admin_usage',
+      'users',
+      'total',
+      'count',
+      'active_admins',
+      'health_check_count',
+    ].some((key) => key in record);
   }
 
   private stringFrom(source: unknown, keys: string[]): string {
