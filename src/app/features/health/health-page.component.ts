@@ -28,6 +28,7 @@ import {
 } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { DemoStatsService } from '../../core/services/demo-stats.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
@@ -227,6 +228,7 @@ const COPY = {
 export class HealthPageComponent implements OnInit {
   private readonly apiService = inject(ApiService);
   private readonly authService = inject(AuthService);
+  private readonly demoStats = inject(DemoStatsService);
   private readonly preferences = inject(PreferencesService);
 
   protected readonly copy = computed(() => COPY[this.preferences.language()]);
@@ -285,14 +287,14 @@ export class HealthPageComponent implements OnInit {
       },
       {
         label: this.copy().pendingReview,
-        value: this.formatNumber(pending),
+        value: this.formatNumber(pending, 'health.pending-review'),
         detail: pending > 40 ? this.copy().statuses.attention : this.copy().statuses.healthy,
         status: pending > 40 ? 'attention' : 'healthy',
         icon: 'queue',
       },
       {
         label: this.copy().activeUsers,
-        value: this.formatNumber(this.activeUsers()),
+        value: this.formatNumber(this.activeUsers(), 'health.active-users'),
         detail: this.copy().authenticated,
         status: this.authService.isAuthenticated() ? 'healthy' : 'attention',
         icon: 'users',
@@ -323,13 +325,13 @@ export class HealthPageComponent implements OnInit {
         metric: this.authService.isAuthenticated() ? 'Bearer' : this.copy().noData,
       }),
       this.service('planning', hasHealth ? (pending > 40 ? 'attention' : 'healthy') : 'down', {
-        metric: `${this.formatNumber(pending)} ${this.copy().pendingReview.toLowerCase()}`,
+        metric: `${this.formatNumber(pending, 'health.service.pending')} ${this.copy().pendingReview.toLowerCase()}`,
       }),
       this.service('mail', hasHealth ? (sent > 0 ? 'healthy' : 'attention') : 'down', {
-        metric: this.formatNumber(sent),
+        metric: this.formatNumber(sent, 'health.service.mail'),
       }),
       this.service('audit', hasHealth ? (audits > 0 ? 'healthy' : 'attention') : 'down', {
-        metric: this.formatNumber(audits),
+        metric: this.formatNumber(audits, 'health.service.audit'),
       }),
     ];
   });
@@ -355,19 +357,25 @@ export class HealthPageComponent implements OnInit {
 
   protected readonly snapshot = computed(() => {
     return [
-      { label: this.copy().snapshotLabels.users, value: this.formatNumber(this.totalUsers()) },
+      {
+        label: this.copy().snapshotLabels.users,
+        value: this.formatNumber(this.totalUsers(), 'health.snapshot.users'),
+      },
       {
         label: this.copy().snapshotLabels.admins,
-        value: this.formatNumber(this.adminUsers()),
+        value: this.formatNumber(this.adminUsers(), 'health.snapshot.admins'),
       },
       {
         label: this.copy().snapshotLabels.imports,
-        value: this.formatNumber(this.planningImports()),
+        value: this.formatNumber(this.planningImports(), 'health.snapshot.imports'),
       },
-      { label: this.copy().snapshotLabels.sent, value: this.formatNumber(this.draftsSent()) },
+      {
+        label: this.copy().snapshotLabels.sent,
+        value: this.formatNumber(this.draftsSent(), 'health.snapshot.sent'),
+      },
       {
         label: this.copy().snapshotLabels.audits,
-        value: this.formatNumber(this.auditEvents()),
+        value: this.formatNumber(this.auditEvents(), 'health.snapshot.audits'),
       },
     ];
   });
@@ -986,13 +994,15 @@ export class HealthPageComponent implements OnInit {
     return of(null);
   }
 
-  private formatNumber(value: unknown): string {
+  private formatNumber(value: unknown, key: string): string {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
       return '-';
     }
 
+    const displayValue = this.demoStats.number(value, key);
+
     return new Intl.NumberFormat(this.preferences.language() === 'fr' ? 'fr-FR' : 'en-US').format(
-      value,
+      displayValue,
     );
   }
 

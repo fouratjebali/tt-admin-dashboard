@@ -22,6 +22,7 @@ import {
   PaginatedResponse,
 } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
+import { DemoStatsService } from '../../core/services/demo-stats.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
@@ -196,6 +197,7 @@ const COPY = {
 })
 export class AdminUsagePageComponent implements OnInit, OnDestroy {
   private readonly apiService = inject(ApiService);
+  private readonly demoStats = inject(DemoStatsService);
   private readonly preferences = inject(PreferencesService);
   private searchDebounce?: ReturnType<typeof setTimeout>;
 
@@ -231,43 +233,43 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
   protected readonly metrics = computed<UsageMetric[]>(() => [
     {
       label: this.copy().metrics.actions,
-      value: this.formatNumber(this.totalActionCount()),
+      value: this.formatNumber(this.totalActionCount(), 'usage.total-actions'),
       tone: 'blue',
       icon: 'activity',
     },
     {
       label: this.copy().metrics.activeAdmins,
-      value: this.formatNumber(this.activeAdminCount()),
+      value: this.formatNumber(this.activeAdminCount(), 'usage.active-admins'),
       tone: 'blue',
       icon: 'login',
     },
     {
       label: this.copy().metrics.logins,
-      value: this.formatNumber(this.loginCount()),
+      value: this.formatNumber(this.loginCount(), 'usage.logins'),
       tone: 'green',
       icon: 'login',
     },
     {
       label: this.copy().metrics.changes,
-      value: this.formatNumber(this.changeCount()),
+      value: this.formatNumber(this.changeCount(), 'usage.changes'),
       tone: 'amber',
       icon: 'changes',
     },
     {
       label: this.copy().metrics.deletes,
-      value: this.formatNumber(this.deleteCount()),
+      value: this.formatNumber(this.deleteCount(), 'usage.deletes'),
       tone: 'red',
       icon: 'changes',
     },
     {
       label: this.copy().metrics.health,
-      value: this.formatNumber(this.healthCheckCount()),
+      value: this.formatNumber(this.healthCheckCount(), 'usage.health-checks'),
       tone: 'green',
       icon: 'health',
     },
     {
       label: this.copy().metrics.failed,
-      value: this.formatNumber(this.failedActionCount()),
+      value: this.formatNumber(this.failedActionCount(), 'usage.failed-actions'),
       tone: 'red',
       icon: 'activity',
     },
@@ -491,6 +493,7 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
   protected adminActions(admin: AdminUsageAdmin): string {
     return this.formatNumber(
       this.numberFrom(admin, ['actions_count', 'total_actions', 'actions', 'usage_total']),
+      `usage.admin-actions.${this.adminId(admin)}`,
     );
   }
 
@@ -523,7 +526,10 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
   }
 
   protected selectedAdminMetric(path: string[]): string {
-    return this.formatNumber(this.numberFrom(this.selectedAdminOverview(), path));
+    return this.formatNumber(
+      this.numberFrom(this.selectedAdminOverview(), path),
+      `usage.selected-admin.${path.join('.')}`,
+    );
   }
 
   protected metadataText(action: AdminUsageAction | null): string {
@@ -1004,9 +1010,11 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
     return backendErrorMessage(error, this.copy().errors.load);
   }
 
-  private formatNumber(value: number): string {
+  private formatNumber(value: number, key: string): string {
+    const displayValue = this.demoStats.number(value, key);
+
     return new Intl.NumberFormat(this.preferences.language() === 'fr' ? 'fr-FR' : 'en-US').format(
-      value,
+      displayValue,
     );
   }
 

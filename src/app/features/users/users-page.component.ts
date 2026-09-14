@@ -18,6 +18,7 @@ import { Observable, catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { AdminRole, AdminUser, PaginatedResponse } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
+import { DemoStatsService } from '../../core/services/demo-stats.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
@@ -159,6 +160,7 @@ const COPY = {
 })
 export class UsersPageComponent implements OnInit, OnDestroy {
   private readonly apiService = inject(ApiService);
+  private readonly demoStats = inject(DemoStatsService);
   private readonly preferences = inject(PreferencesService);
   private searchDebounce?: ReturnType<typeof setTimeout>;
 
@@ -204,10 +206,26 @@ export class UsersPageComponent implements OnInit, OnDestroy {
     ).length;
 
     return [
-      { label: this.copy().totals.total, value: this.total() || users.length, tone: 'neutral' },
-      { label: this.copy().totals.active, value: active, tone: 'success' },
-      { label: this.copy().totals.admins, value: privileged, tone: 'accent' },
-      { label: this.copy().totals.inactive, value: users.length - active, tone: 'warning' },
+      {
+        label: this.copy().totals.total,
+        value: this.demoStats.number(this.total() || users.length, 'users.total'),
+        tone: 'neutral',
+      },
+      {
+        label: this.copy().totals.active,
+        value: this.demoStats.number(active, 'users.active'),
+        tone: 'success',
+      },
+      {
+        label: this.copy().totals.admins,
+        value: this.demoStats.number(privileged, 'users.privileged'),
+        tone: 'accent',
+      },
+      {
+        label: this.copy().totals.inactive,
+        value: this.demoStats.number(users.length - active, 'users.inactive'),
+        tone: 'warning',
+      },
     ];
   });
 

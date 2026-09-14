@@ -20,6 +20,7 @@ import { finalize } from 'rxjs';
 
 import { AuditLog, PaginatedResponse } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
+import { DemoStatsService } from '../../core/services/demo-stats.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
@@ -135,6 +136,7 @@ const COPY = {
 })
 export class AuditPageComponent implements OnInit, OnDestroy {
   private readonly apiService = inject(ApiService);
+  private readonly demoStats = inject(DemoStatsService);
   private readonly preferences = inject(PreferencesService);
   private searchDebounce?: ReturnType<typeof setTimeout>;
 
@@ -185,12 +187,24 @@ export class AuditPageComponent implements OnInit, OnDestroy {
     return [
       {
         label: this.copy().stats.total,
-        value: this.total() || logs.length,
+        value: this.demoStats.number(this.total() || logs.length, 'audit.total'),
         tone: 'neutral' as StatTone,
       },
-      { label: this.copy().stats.actors, value: actors.size, tone: 'success' as StatTone },
-      { label: this.copy().stats.today, value: today, tone: 'accent' as StatTone },
-      { label: this.copy().stats.resources, value: resources.size, tone: 'warning' as StatTone },
+      {
+        label: this.copy().stats.actors,
+        value: this.demoStats.number(actors.size, 'audit.actors'),
+        tone: 'success' as StatTone,
+      },
+      {
+        label: this.copy().stats.today,
+        value: this.demoStats.number(today, 'audit.today'),
+        tone: 'accent' as StatTone,
+      },
+      {
+        label: this.copy().stats.resources,
+        value: this.demoStats.number(resources.size, 'audit.resources'),
+        tone: 'warning' as StatTone,
+      },
     ];
   });
 

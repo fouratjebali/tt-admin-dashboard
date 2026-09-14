@@ -26,6 +26,7 @@ import {
   PlanningAnalyticsOverview,
 } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
+import { DemoStatsService } from '../../core/services/demo-stats.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
@@ -141,6 +142,7 @@ const DASHBOARD_COPY = {
 })
 export class DashboardPageComponent implements OnInit {
   private readonly apiService = inject(ApiService);
+  private readonly demoStats = inject(DemoStatsService);
   private readonly preferences = inject(PreferencesService);
 
   protected readonly copy = computed(() => DASHBOARD_COPY[this.preferences.language()]);
@@ -167,13 +169,13 @@ export class DashboardPageComponent implements OnInit {
   protected readonly metrics = computed(() => [
     {
       label: this.copy().metrics.files,
-      value: this.formatNumber(this.filesTreated()),
+      value: this.formatNumber(this.filesTreated(), 'dashboard.files-treated'),
       change: this.copy().currentRange,
       tone: 'teal' as MetricTone,
     },
     {
       label: this.copy().metrics.drafts,
-      value: this.formatNumber(this.draftsPrepared()),
+      value: this.formatNumber(this.draftsPrepared(), 'dashboard.drafts-prepared'),
       change: this.copy().currentRange,
       tone: 'sage' as MetricTone,
     },
@@ -202,13 +204,14 @@ export class DashboardPageComponent implements OnInit {
             'drafts_pending_review',
           ]),
         ]),
+        'dashboard.pending-review',
       ),
       change: this.copy().currentRange,
       tone: 'amber' as MetricTone,
     },
     {
       label: this.copy().metrics.admins,
-      value: this.formatNumber(this.activeDashboardUsers()),
+      value: this.formatNumber(this.activeDashboardUsers(), 'dashboard.active-admins'),
       change: this.copy().currentRange,
       tone: 'blue' as MetricTone,
     },
@@ -216,11 +219,26 @@ export class DashboardPageComponent implements OnInit {
 
   protected readonly pipeline = computed(() => {
     const steps = [
-      { label: this.copy().pipeline.imports, count: this.importsTotal() },
-      { label: this.copy().pipeline.files, count: this.filesTreated() },
-      { label: this.copy().pipeline.drafts, count: this.draftsPrepared() },
-      { label: this.copy().pipeline.reviewed, count: this.draftsReviewed() },
-      { label: this.copy().pipeline.sent, count: this.draftsSent() },
+      {
+        label: this.copy().pipeline.imports,
+        count: this.demoStats.number(this.importsTotal(), 'dashboard.pipeline.imports'),
+      },
+      {
+        label: this.copy().pipeline.files,
+        count: this.demoStats.number(this.filesTreated(), 'dashboard.pipeline.files'),
+      },
+      {
+        label: this.copy().pipeline.drafts,
+        count: this.demoStats.number(this.draftsPrepared(), 'dashboard.pipeline.drafts'),
+      },
+      {
+        label: this.copy().pipeline.reviewed,
+        count: this.demoStats.number(this.draftsReviewed(), 'dashboard.pipeline.reviewed'),
+      },
+      {
+        label: this.copy().pipeline.sent,
+        count: this.demoStats.number(this.draftsSent(), 'dashboard.pipeline.sent'),
+      },
     ];
     const max = Math.max(...steps.map((step) => step.count), 1);
 
@@ -757,9 +775,11 @@ export class DashboardPageComponent implements OnInit {
     return backendErrorMessage(error, this.copy().error);
   }
 
-  private formatNumber(value: number): string {
+  private formatNumber(value: number, key?: string): string {
+    const displayValue = key ? this.demoStats.number(value, key) : value;
+
     return new Intl.NumberFormat(this.preferences.language() === 'fr' ? 'fr-FR' : 'en-US').format(
-      value,
+      displayValue,
     );
   }
 

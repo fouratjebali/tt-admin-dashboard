@@ -23,6 +23,7 @@ import {
   ResponsablePayload,
 } from '../../core/models/backend-api.model';
 import { ApiService } from '../../core/services/api.service';
+import { DemoStatsService } from '../../core/services/demo-stats.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { backendErrorMessage, isNetworkError } from '../../core/utils/api-error.util';
 
@@ -183,6 +184,7 @@ const COPY = {
 })
 export class ResponsablesPageComponent implements OnInit, OnDestroy {
   private readonly apiService = inject(ApiService);
+  private readonly demoStats = inject(DemoStatsService);
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly preferences = inject(PreferencesService);
   private searchDebounce?: ReturnType<typeof setTimeout>;
@@ -244,22 +246,22 @@ export class ResponsablesPageComponent implements OnInit, OnDestroy {
     return [
       {
         label: this.copy().stats.total,
-        value: this.total(),
+        value: this.demoStats.number(this.total(), 'responsables.total'),
         tone: 'neutral' as StatTone,
       },
       {
         label: this.copy().stats.residences,
-        value: residences.size,
+        value: this.demoStats.number(residences.size, 'responsables.residences'),
         tone: 'success' as StatTone,
       },
       {
         label: this.copy().stats.functions,
-        value: functions.size,
+        value: this.demoStats.number(functions.size, 'responsables.functions'),
         tone: 'accent' as StatTone,
       },
       {
         label: this.copy().stats.page,
-        value: currentPageResponsables.length,
+        value: this.demoStats.number(currentPageResponsables.length, 'responsables.loaded-page'),
         tone: 'warning' as StatTone,
       },
     ];
