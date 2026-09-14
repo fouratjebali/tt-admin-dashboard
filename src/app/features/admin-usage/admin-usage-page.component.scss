@@ -286,9 +286,15 @@
   min-height: 54px;
 }
 
+.usage-table__row > span,
+.usage-table__row time {
+  min-width: 0;
+  overflow: hidden;
+}
+
 .usage-table__row > span:first-child {
   color: var(--tt-ink);
-  font-weight: 820;
+  white-space: nowrap;
 }
 
 .usage-table mark,

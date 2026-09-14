@@ -454,10 +454,16 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
   }
 
   protected actionActor(action: AdminUsageAction): string {
+    const admin = this.adminForAction(action);
+
+    if (admin) {
+      return this.adminName(admin);
+    }
+
     return (
       action.admin_name ||
-      action.actor_email ||
-      action.admin_email ||
+      this.stringFrom(action, ['display_name', 'full_name', 'name', 'username']) ||
+      this.nameFromEmail(action.actor_email || action.admin_email) ||
       String(action.actor_user_id ?? '') ||
       this.copy().noData
     );
@@ -526,6 +532,33 @@ export class AdminUsagePageComponent implements OnInit, OnDestroy {
     }
 
     return JSON.stringify(action.metadata, null, 2);
+  }
+
+  private adminForAction(action: AdminUsageAction): AdminUsageAdmin | undefined {
+    const actionAdminId = action.admin_id || action.actor_user_id;
+    const actionEmail = action.admin_email || action.actor_email;
+
+    return this.admins().find((admin) => {
+      const adminId = this.adminId(admin);
+
+      return Boolean(
+        (actionAdminId && adminId === actionAdminId) ||
+        (actionEmail && admin.email.toLowerCase() === actionEmail.toLowerCase()),
+      );
+    });
+  }
+
+  private nameFromEmail(email?: string): string {
+    if (!email) {
+      return '';
+    }
+
+    return (
+      email
+        .split('@')[0]
+        ?.replace(/[._-]+/g, ' ')
+        .trim() ?? ''
+    );
   }
 
   private loadSelectedAdminOverview(): void {
