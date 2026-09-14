@@ -273,6 +273,10 @@
   min-width: 0;
 }
 
+.audit-actor > span:last-child {
+  min-width: 0;
+}
+
 .audit-actor__icon {
   background: var(--tt-teal-light);
   color: var(--tt-teal);

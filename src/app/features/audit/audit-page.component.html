@@ -130,7 +130,9 @@
               </span>
               <span>
                 <strong>{{ actorLabel(log) }}</strong>
-                <small>{{ log.actor_user_id || log.id }}</small>
+                @if (actorMeta(log)) {
+                  <small>{{ actorMeta(log) }}</small>
+                }
               </span>
             </div>
 

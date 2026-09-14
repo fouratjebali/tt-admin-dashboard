@@ -302,7 +302,23 @@ export class AuditPageComponent implements OnInit, OnDestroy {
   }
 
   protected actorLabel(log: AuditLog): string {
-    return log.actor_email || log.actor_user_id || this.copy().systemActor;
+    const directName = this.stringFrom(this.recordFrom(log) ?? {}, [
+      'actor_name',
+      'actorName',
+      'admin_name',
+      'display_name',
+      'displayName',
+      'full_name',
+      'fullName',
+      'name',
+      'username',
+    ]);
+
+    return directName || this.nameFromEmail(log.actor_email) || this.copy().systemActor;
+  }
+
+  protected actorMeta(log: AuditLog): string {
+    return log.actor_role || log.actor_user_id || '';
   }
 
   protected actionGroup(action: string): string {
@@ -566,6 +582,19 @@ export class AuditPageComponent implements OnInit, OnDestroy {
     }
 
     return '';
+  }
+
+  private nameFromEmail(email?: string): string {
+    if (!email) {
+      return '';
+    }
+
+    return (
+      email
+        .split('@')[0]
+        ?.replace(/[._-]+/g, ' ')
+        .trim() ?? ''
+    );
   }
 
   private numberFrom(record: Record<string, unknown> | null, keys: string[]): number | null {
