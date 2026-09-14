@@ -8,7 +8,6 @@ import {
   LucideLanguages,
   LucideLayoutDashboard,
   LucideLogOut,
-  LucideMailCheck,
   LucideMenu,
   LucideMoon,
   LucideSearch,
@@ -56,9 +55,6 @@ const LAYOUT_COPY = {
       adminUsage: 'Admin usage',
       responsables: 'Responsables',
     },
-    queueLabel: 'Review queue',
-    queueValue: '18',
-    queueHint: 'pending drafts',
   },
   fr: {
     workspace: 'Espace admin',
@@ -84,9 +80,6 @@ const LAYOUT_COPY = {
       adminUsage: 'Usage admin',
       responsables: 'Responsables',
     },
-    queueLabel: 'File de revue',
-    queueValue: '18',
-    queueHint: 'drafts en attente',
   },
 };
 
@@ -142,7 +135,6 @@ const NAV_ITEMS: NavItem[] = [
     LucideLanguages,
     LucideLayoutDashboard,
     LucideLogOut,
-    LucideMailCheck,
     LucideMenu,
     LucideMoon,
     LucideSearch,

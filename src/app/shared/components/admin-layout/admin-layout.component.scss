@@ -100,48 +100,6 @@
   color: var(--tt-forest);
 }
 
-.admin-sidebar__summary {
-  align-items: center;
-  border: 1px solid var(--tt-line);
-  border-radius: 8px;
-  display: flex;
-  gap: 10px;
-  margin-top: auto;
-  padding: 12px;
-}
-
-.admin-sidebar__summary-icon {
-  align-items: center;
-  background: var(--tt-teal-light);
-  border-radius: 8px;
-  color: var(--tt-teal);
-  display: inline-flex;
-  height: 34px;
-  justify-content: center;
-  width: 34px;
-}
-
-.admin-sidebar__summary span,
-.admin-sidebar__summary strong,
-.admin-sidebar__summary small {
-  display: block;
-  line-height: 1.15;
-}
-
-.admin-sidebar__summary span,
-.admin-sidebar__summary small {
-  color: var(--tt-ink-faint);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.admin-sidebar__summary strong {
-  color: var(--tt-ink);
-  font-size: 24px;
-  font-weight: 850;
-  margin: 2px 0;
-}
-
 .admin-workspace {
   display: grid;
   grid-template-rows: 64px 1fr;
